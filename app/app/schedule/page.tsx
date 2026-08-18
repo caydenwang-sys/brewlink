@@ -4,6 +4,21 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+type Match = {
+  id: number
+  user_1_id: string
+  user_2_id: string
+  status: string | null
+}
+
+type Profile = {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  major: string | null
+  career_goal: string | null
+}
+
 type Availability = {
   id: number
   user_id: string
@@ -12,15 +27,26 @@ type Availability = {
   end_time: string
 }
 
-const days = [
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-  { value: 7, label: 'Sunday' },
-]
+type Meeting = {
+  id: number
+  match_id: number | null
+  scheduled_date: string | null
+  start_time: string | null
+  end_time: string | null
+  location: string | null
+  status: string | null
+}
+
+type OverlappingTime = {
+  day_of_week: number
+  start_time: string
+  end_time: string
+  date: string
+}
+
+// ============================================
+// TIME HELPERS
+// ============================================
 
 function formatTime(time: string) {
   const [hours, minutes] = time.split(':').map(Number)
@@ -40,47 +66,463 @@ function timeToMinutes(time: string) {
   return hours * 60 + minutes
 }
 
-export default function AvailabilityPage() {
+function minutesToTime(minutes: number) {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
+}
+
+// ============================================
+// DATE HELPERS
+// ============================================
+
+function getNextDateForDay(dayOfWeek: number) {
+  const today = new Date()
+
+  // JavaScript:
+  // Sunday = 0
+  // Monday = 1
+  // ...
+  // Saturday = 6
+  //
+  // BrewLink:
+  // Monday = 1
+  // ...
+  // Sunday = 7
+
+  const currentDay =
+    today.getDay() === 0
+      ? 7
+      : today.getDay()
+
+  let difference =
+    dayOfWeek - currentDay
+
+  // Always use the next occurrence.
+  // If availability is Monday and today is Monday,
+  // use next Monday rather than today.
+  if (difference <= 0) {
+    difference += 7
+  }
+
+  const result = new Date(today)
+
+  result.setDate(
+    today.getDate() + difference
+  )
+
+  return result
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(
+    `${dateString}T00:00:00`
+  )
+
+  return date.toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+function dateToString(date: Date) {
+  return (
+    `${date.getFullYear()}-` +
+    `${String(date.getMonth() + 1).padStart(2, '0')}-` +
+    `${String(date.getDate()).padStart(2, '0')}`
+  )
+}
+
+// ============================================
+// COMPONENT
+// ============================================
+
+export default function SchedulePage() {
   const router = useRouter()
 
-  const [availability, setAvailability] = useState<Availability[]>([])
+  const [userId, setUserId] =
+    useState<string | null>(null)
 
-  const [selectedDay, setSelectedDay] = useState(1)
-  const [startTime, setStartTime] = useState('09:00')
-  const [endTime, setEndTime] = useState('10:00')
+  const [matches, setMatches] =
+    useState<Match[]>([])
 
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [profiles, setProfiles] =
+    useState<Record<string, Profile>>({})
 
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [availability, setAvailability] =
+    useState<Availability[]>([])
+
+  const [meetings, setMeetings] =
+    useState<Meeting[]>([])
+
+  const [selectedMatch, setSelectedMatch] =
+    useState<Match | null>(null)
+
+  const [overlappingTimes, setOverlappingTimes] =
+    useState<OverlappingTime[]>([])
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [loadingTimes, setLoadingTimes] =
+    useState(false)
+
+  const [scheduling, setScheduling] =
+    useState(false)
+
+  const [cancelling, setCancelling] =
+    useState<number | null>(null)
+
+  const [error, setError] =
+    useState('')
+
+  const [success, setSuccess] =
+    useState('')
 
   // ============================================
-  // LOAD AVAILABILITY
+  // LOAD SCHEDULE DATA
   // ============================================
 
   useEffect(() => {
-    async function loadAvailability() {
+    async function loadSchedule() {
       const supabase = createClient()
 
       setLoading(true)
       setError('')
 
+      // ------------------------------------------
+      // GET CURRENT USER
+      // ------------------------------------------
+
       const {
         data: { user },
         error: userError,
-      } = await supabase.auth.getUser()
+      } =
+        await supabase.auth.getUser()
 
       if (userError || !user) {
         router.push('/login')
         return
       }
 
+      setUserId(user.id)
+
+      // ------------------------------------------
+      // GET MATCHES
+      // ------------------------------------------
+
       const {
-        data,
+        data: matchData,
+        error: matchError,
+      } =
+        await supabase
+          .from('matches')
+          .select(`
+            id,
+            user_1_id,
+            user_2_id,
+            status
+          `)
+          .or(
+            `user_1_id.eq.${user.id},user_2_id.eq.${user.id}`
+          )
+          .eq('status', 'active')
+
+      if (matchError) {
+        console.error(matchError)
+
+        setError(
+          `Could not load your matches: ${matchError.message}`
+        )
+
+        setLoading(false)
+        return
+      }
+
+      const loadedMatches =
+        (matchData || []) as Match[]
+
+      setMatches(loadedMatches)
+
+      // ------------------------------------------
+      // GET OTHER USER IDS
+      // ------------------------------------------
+
+      const otherUserIds =
+        loadedMatches.map((match) =>
+          match.user_1_id === user.id
+            ? match.user_2_id
+            : match.user_1_id
+        )
+
+      // ------------------------------------------
+      // GET PROFILES
+      // ------------------------------------------
+
+      if (otherUserIds.length > 0) {
+        const {
+          data: profileData,
+          error: profileError,
+        } =
+          await supabase
+            .from('profiles')
+            .select(`
+              id,
+              first_name,
+              last_name,
+              major,
+              career_goal
+            `)
+            .in('id', otherUserIds)
+
+        if (profileError) {
+          console.error(profileError)
+
+          setError(
+            `Could not load your match profiles: ${profileError.message}`
+          )
+
+          setLoading(false)
+          return
+        }
+
+        const profileMap:
+          Record<string, Profile> = {}
+
+        ;(profileData || []).forEach(
+          (profile) => {
+            profileMap[profile.id] =
+              profile as Profile
+          }
+        )
+
+        setProfiles(profileMap)
+      }
+
+      // ------------------------------------------
+      // GET MY AVAILABILITY
+      // ------------------------------------------
+
+      const {
+        data: myAvailability,
         error: availabilityError,
-      } = await supabase
+      } =
+        await supabase
+          .from('availability')
+          .select(`
+            id,
+            user_id,
+            day_of_week,
+            start_time,
+            end_time
+          `)
+          .eq('user_id', user.id)
+
+      if (availabilityError) {
+        console.error(
+          availabilityError
+        )
+
+        setError(
+          `Could not load your availability: ${availabilityError.message}`
+        )
+
+        setLoading(false)
+        return
+      }
+
+      setAvailability(
+        (myAvailability || []) as Availability[]
+      )
+
+      // ------------------------------------------
+      // GET EXISTING MEETINGS
+      // ------------------------------------------
+
+      const matchIds =
+        loadedMatches.map(
+          (match) => match.id
+        )
+
+      if (matchIds.length > 0) {
+        const {
+          data: meetingData,
+          error: meetingError,
+        } =
+          await supabase
+            .from('meetings')
+            .select(`
+              id,
+              match_id,
+              scheduled_date,
+              start_time,
+              end_time,
+              location,
+              status
+            `)
+            .in('match_id', matchIds)
+            .order(
+              'scheduled_date',
+              {
+                ascending: true,
+              }
+            )
+
+        if (meetingError) {
+          console.error(
+            meetingError
+          )
+
+          setError(
+            `Could not load your scheduled meetings: ${meetingError.message}`
+          )
+
+          setLoading(false)
+          return
+        }
+
+        setMeetings(
+          (meetingData || []) as Meeting[]
+        )
+      }
+
+      setLoading(false)
+    }
+
+    loadSchedule()
+  }, [router])
+
+  // ============================================
+  // GET OTHER USER
+  // ============================================
+
+  function getOtherUserId(match: Match) {
+    if (!userId) {
+      return null
+    }
+
+    return match.user_1_id === userId
+      ? match.user_2_id
+      : match.user_1_id
+  }
+
+  function getOtherProfile(match: Match) {
+    const otherUserId =
+      getOtherUserId(match)
+
+    if (!otherUserId) {
+      return null
+    }
+
+    return profiles[otherUserId] || null
+  }
+
+  function getProfileName(match: Match) {
+    const profile =
+      getOtherProfile(match)
+
+    if (!profile) {
+      return 'Your match'
+    }
+
+    return (
+      `${profile.first_name || ''} ` +
+      `${profile.last_name || ''}`
+    ).trim() || 'Your match'
+  }
+
+  // ============================================
+  // RELOAD MEETINGS
+  // ============================================
+
+  async function reloadMeetings() {
+    if (matches.length === 0) {
+      setMeetings([])
+      return
+    }
+
+    const supabase = createClient()
+
+    const matchIds =
+      matches.map(
+        (match) => match.id
+      )
+
+    const {
+      data: updatedMeetings,
+      error: updatedMeetingsError,
+    } =
+      await supabase
+        .from('meetings')
+        .select(`
+          id,
+          match_id,
+          scheduled_date,
+          start_time,
+          end_time,
+          location,
+          status
+        `)
+        .in(
+          'match_id',
+          matchIds
+        )
+        .order(
+          'scheduled_date',
+          {
+            ascending: true,
+          }
+        )
+
+    if (updatedMeetingsError) {
+      console.error(
+        'Could not reload meetings:',
+        updatedMeetingsError
+      )
+
+      return
+    }
+
+    setMeetings(
+      (updatedMeetings || []) as Meeting[]
+    )
+  }
+
+  // ============================================
+  // FIND OVERLAPPING AVAILABILITY
+  // ============================================
+
+  async function findOverlappingTimes(
+    match: Match
+  ) {
+    if (!userId) {
+      return
+    }
+
+    const otherUserId =
+      getOtherUserId(match)
+
+    if (!otherUserId) {
+      return
+    }
+
+    const supabase = createClient()
+
+    setLoadingTimes(true)
+    setError('')
+    setOverlappingTimes([])
+
+    // ------------------------------------------
+    // GET OTHER USER AVAILABILITY
+    // ------------------------------------------
+
+    const {
+      data: otherAvailability,
+      error: otherAvailabilityError,
+    } =
+      await supabase
         .from('availability')
         .select(`
           id,
@@ -89,218 +531,487 @@ export default function AvailabilityPage() {
           start_time,
           end_time
         `)
-        .eq('user_id', user.id)
-        .order('day_of_week', {
-          ascending: true,
-        })
-        .order('start_time', {
-          ascending: true,
-        })
+        .eq('user_id', otherUserId)
 
-      if (availabilityError) {
-        console.error(
-          'Could not load availability:',
-          availabilityError
+    if (otherAvailabilityError) {
+      console.error(
+        otherAvailabilityError
+      )
+
+      setError(
+        `Could not load your match's availability: ${otherAvailabilityError.message}`
+      )
+
+      setLoadingTimes(false)
+      return
+    }
+
+    const otherList =
+      (otherAvailability || []) as Availability[]
+
+    // ------------------------------------------
+    // FIND OVERLAPS
+    // ------------------------------------------
+
+    const overlaps: OverlappingTime[] = []
+
+    for (const mine of availability) {
+      const matchesForDay =
+        otherList.filter(
+          (other) =>
+            other.day_of_week ===
+            mine.day_of_week
         )
 
-        setError('Could not load your availability.')
-        setLoading(false)
-        return
-      }
-
-      setAvailability((data || []) as Availability[])
-      setLoading(false)
-    }
-
-    loadAvailability()
-  }, [router])
-
-  // ============================================
-  // ADD AVAILABILITY
-  // ============================================
-
-  async function addAvailability() {
-    if (saving) {
-      return
-    }
-
-    setError('')
-    setSuccess('')
-
-    const startMinutes = timeToMinutes(startTime)
-    const endMinutes = timeToMinutes(endTime)
-
-    // Make sure end is after start
-    if (endMinutes <= startMinutes) {
-      setError(
-        'End time must be later than start time.'
-      )
-      return
-    }
-
-    // Require at least one hour
-    if (endMinutes - startMinutes < 60) {
-      setError(
-        'Availability must be at least one hour long.'
-      )
-      return
-    }
-
-    // Check for overlapping availability
-    const overlapping = availability.some((item) => {
-      if (item.day_of_week !== selectedDay) {
-        return false
-      }
-
-      const existingStart = timeToMinutes(
-        item.start_time
-      )
-
-      const existingEnd = timeToMinutes(
-        item.end_time
-      )
-
-      return (
-        startMinutes < existingEnd &&
-        existingStart < endMinutes
-      )
-    })
-
-    if (overlapping) {
-      setError(
-        'This time overlaps with an existing availability window.'
-      )
-      return
-    }
-
-    const supabase = createClient()
-
-    setSaving(true)
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError || !user) {
-      router.push('/login')
-      setSaving(false)
-      return
-    }
-
-    const {
-      data: newAvailability,
-      error: insertError,
-    } = await supabase
-      .from('availability')
-      .insert({
-        user_id: user.id,
-        day_of_week: selectedDay,
-        start_time: `${startTime}:00`,
-        end_time: `${endTime}:00`,
-      })
-      .select(`
-        id,
-        user_id,
-        day_of_week,
-        start_time,
-        end_time
-      `)
-      .single()
-
-    if (insertError) {
-      console.error(
-        'Could not add availability:',
-        insertError
-      )
-
-      setError(
-        'Could not save your availability. Please try again.'
-      )
-
-      setSaving(false)
-      return
-    }
-
-    setAvailability((current) =>
-      [...current, newAvailability as Availability].sort(
-        (a, b) => {
-          if (a.day_of_week !== b.day_of_week) {
-            return a.day_of_week - b.day_of_week
-          }
-
-          return (
-            timeToMinutes(a.start_time) -
-            timeToMinutes(b.start_time)
+      for (const other of matchesForDay) {
+        const mineStart =
+          timeToMinutes(
+            mine.start_time
           )
+
+        const mineEnd =
+          timeToMinutes(
+            mine.end_time
+          )
+
+        const otherStart =
+          timeToMinutes(
+            other.start_time
+          )
+
+        const otherEnd =
+          timeToMinutes(
+            other.end_time
+          )
+
+        const overlapStart =
+          Math.max(
+            mineStart,
+            otherStart
+          )
+
+        const overlapEnd =
+          Math.min(
+            mineEnd,
+            otherEnd
+          )
+
+        // Require at least one hour
+        if (
+          overlapEnd -
+            overlapStart >=
+          60
+        ) {
+          const date =
+            getNextDateForDay(
+              mine.day_of_week
+            )
+
+          overlaps.push({
+            day_of_week:
+              mine.day_of_week,
+
+            start_time:
+              minutesToTime(
+                overlapStart
+              ),
+
+            end_time:
+              minutesToTime(
+                overlapEnd
+              ),
+
+            date:
+              dateToString(date),
+          })
+        }
+      }
+    }
+
+    // ------------------------------------------
+    // REMOVE DUPLICATES
+    // ------------------------------------------
+
+    const uniqueOverlaps =
+      overlaps.filter(
+        (item, index, array) =>
+          index ===
+          array.findIndex(
+            (other) =>
+              other.date ===
+                item.date &&
+              other.start_time ===
+                item.start_time &&
+              other.end_time ===
+                item.end_time
+          )
+      )
+
+    // ------------------------------------------
+    // REMOVE ALREADY BOOKED TIMES
+    //
+    // IMPORTANT:
+    // cancelled meetings DO NOT block a slot.
+    // ------------------------------------------
+
+    const availableOverlaps =
+      uniqueOverlaps.filter(
+        (overlap) => {
+          const alreadyBooked =
+            meetings.some(
+              (meeting) =>
+                meeting.match_id ===
+                  match.id &&
+                meeting.scheduled_date ===
+                  overlap.date &&
+                meeting.status !==
+                  'cancelled'
+            )
+
+          return !alreadyBooked
         }
       )
+
+    // ------------------------------------------
+    // SORT
+    // ------------------------------------------
+
+    availableOverlaps.sort(
+      (a, b) => {
+        if (
+          a.date !== b.date
+        ) {
+          return a.date.localeCompare(
+            b.date
+          )
+        }
+
+        return (
+          timeToMinutes(
+            a.start_time
+          ) -
+          timeToMinutes(
+            b.start_time
+          )
+        )
+      }
     )
 
-    setSuccess('Availability added.')
+    setOverlappingTimes(
+      availableOverlaps
+    )
 
-    setSaving(false)
+    setLoadingTimes(false)
   }
 
   // ============================================
-  // DELETE AVAILABILITY
+  // SELECT MATCH
   // ============================================
 
-  async function deleteAvailability(id: number) {
-    if (deletingId !== null) {
+  async function selectMatch(
+    match: Match
+  ) {
+    setSelectedMatch(match)
+
+    setError('')
+    setSuccess('')
+
+    await findOverlappingTimes(
+      match
+    )
+  }
+
+  // ============================================
+  // SCHEDULE MEETING
+  // ============================================
+
+  async function scheduleMeeting(
+    overlap: OverlappingTime
+  ) {
+    if (
+      !selectedMatch ||
+      scheduling
+    ) {
       return
     }
 
     setError('')
     setSuccess('')
+    setScheduling(true)
 
     const supabase = createClient()
 
-    setDeletingId(id)
+    // ------------------------------------------
+    // CHECK FOR EXISTING MEETING
+    // ------------------------------------------
 
     const {
-      error: deleteError,
-    } = await supabase
-      .from('availability')
-      .delete()
-      .eq('id', id)
+      data: existingMeeting,
+      error: existingMeetingError,
+    } =
+      await supabase
+        .from('meetings')
+        .select(`
+          id,
+          match_id,
+          scheduled_date,
+          start_time,
+          end_time,
+          location,
+          status
+        `)
+        .eq(
+          'match_id',
+          selectedMatch.id
+        )
+        .eq(
+          'scheduled_date',
+          overlap.date
+        )
+        .neq(
+          'status',
+          'cancelled'
+        )
+        .maybeSingle()
 
-    if (deleteError) {
+    if (existingMeetingError) {
       console.error(
-        'Could not delete availability:',
-        deleteError
+        existingMeetingError
       )
 
       setError(
-        'Could not delete this availability. Please try again.'
+        `Could not check for an existing meeting: ${existingMeetingError.message}`
       )
 
-      setDeletingId(null)
+      setScheduling(false)
       return
     }
 
-    setAvailability((current) =>
-      current.filter((item) => item.id !== id)
+    if (existingMeeting) {
+      setError(
+        'You already have a meeting scheduled with this match on this date.'
+      )
+
+      setScheduling(false)
+
+      await reloadMeetings()
+
+      await findOverlappingTimes(
+        selectedMatch
+      )
+
+      return
+    }
+
+    // ------------------------------------------
+    // INSERT MEETING
+    // ------------------------------------------
+
+    const {
+      data: newMeeting,
+      error: meetingError,
+    } =
+      await supabase
+        .from('meetings')
+        .insert({
+          match_id:
+            selectedMatch.id,
+
+          scheduled_date:
+            overlap.date,
+
+          start_time:
+            `${overlap.start_time}:00`,
+
+          end_time:
+            `${overlap.end_time}:00`,
+
+          location:
+            null,
+
+          status:
+            'scheduled',
+        })
+        .select(`
+          id,
+          match_id,
+          scheduled_date,
+          start_time,
+          end_time,
+          location,
+          status
+        `)
+        .single()
+
+    if (meetingError) {
+      console.error(
+        'MEETING INSERT ERROR:',
+        meetingError
+      )
+
+      setError(
+        `Could not schedule this meeting: ${meetingError.message}`
+      )
+
+      setScheduling(false)
+      return
+    }
+
+    // ------------------------------------------
+    // UPDATE MEETINGS STATE
+    // ------------------------------------------
+
+    if (newMeeting) {
+      setMeetings(
+        (current) => [
+          ...current,
+          newMeeting as Meeting,
+        ]
+      )
+    }
+
+    // ------------------------------------------
+    // REMOVE SCHEDULED SLOT
+    // ------------------------------------------
+
+    setOverlappingTimes(
+      (current) =>
+        current.filter(
+          (item) =>
+            !(
+              item.date ===
+                overlap.date &&
+              item.start_time ===
+                overlap.start_time
+            )
+        )
     )
 
-    setSuccess('Availability removed.')
+    // ------------------------------------------
+    // SUCCESS
+    // ------------------------------------------
 
-    setDeletingId(null)
+    setSuccess(
+      `Coffee chat scheduled with ${getProfileName(
+        selectedMatch
+      )}!`
+    )
+
+    setScheduling(false)
   }
 
   // ============================================
-  // GET DAY NAME
+  // CANCEL MEETING
   // ============================================
 
-  function getDayName(day: number) {
-    return (
-      days.find((item) => item.value === day)?.label ||
-      'Unknown day'
+  async function cancelMeeting(
+    meetingId: number
+  ) {
+    if (cancelling !== null) {
+      return
+    }
+
+    const confirmed =
+      window.confirm(
+        'Are you sure you want to cancel this coffee chat?'
+      )
+
+    if (!confirmed) {
+      return
+    }
+
+    setError('')
+    setSuccess('')
+    setCancelling(meetingId)
+
+    const supabase = createClient()
+
+    // ------------------------------------------
+    // UPDATE DATABASE
+    // ------------------------------------------
+
+    const {
+      error: cancelError,
+    } =
+      await supabase
+        .from('meetings')
+        .update({
+          status: 'cancelled',
+        })
+        .eq(
+          'id',
+          meetingId
+        )
+
+    if (cancelError) {
+      console.error(
+        'Could not cancel meeting:',
+        cancelError
+      )
+
+      setError(
+        `Could not cancel this meeting: ${cancelError.message}`
+      )
+
+      setCancelling(null)
+      return
+    }
+
+    // ------------------------------------------
+    // REMOVE FROM UPCOMING UI
+    // ------------------------------------------
+
+    setMeetings(
+      (current) =>
+        current.filter(
+          (meeting) =>
+            meeting.id !==
+            meetingId
+        )
     )
+
+    // ------------------------------------------
+    // SUCCESS
+    // ------------------------------------------
+
+    setSuccess(
+      'Your coffee chat has been cancelled.'
+    )
+
+    setCancelling(null)
+
+    // ------------------------------------------
+    // REFRESH DATABASE STATE
+    // ------------------------------------------
+
+    await reloadMeetings()
+
+    // ------------------------------------------
+    // REFRESH AVAILABLE TIMES
+    //
+    // Because the meeting is now cancelled,
+    // its previous time becomes available again.
+    // ------------------------------------------
+
+    if (selectedMatch) {
+      await findOverlappingTimes(
+        selectedMatch
+      )
+    }
   }
 
   // ============================================
-  // LOADING
+  // UPCOMING MEETINGS
+  // ============================================
+
+  const upcomingMeetings =
+    meetings.filter(
+      (meeting) =>
+        meeting.status !== 'cancelled'
+    )
+
+  // ============================================
+  // LOADING SCREEN
   // ============================================
 
   if (loading) {
@@ -313,7 +1024,7 @@ export default function AvailabilityPage() {
           </div>
 
           <p className="mt-4 text-sm font-medium text-gray-500">
-            Loading your availability...
+            Loading your schedule...
           </p>
 
         </div>
@@ -360,7 +1071,7 @@ export default function AvailabilityPage() {
 
       {/* MAIN */}
 
-      <div className="mx-auto max-w-4xl px-5 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-6 sm:py-12">
 
         {/* TITLE */}
 
@@ -371,14 +1082,11 @@ export default function AvailabilityPage() {
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-            Your availability.
+            Schedule a coffee chat.
           </h1>
 
           <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-500">
-            Add the times you're usually available
-            for coffee chats. BrewLink will use these
-            times to find matches that work for both
-            people.
+            Choose a match and find a time that works for both of you.
           </p>
 
         </section>
@@ -399,151 +1107,45 @@ export default function AvailabilityPage() {
           </div>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr]">
 
-          {/* ADD AVAILABILITY */}
+          {/* MATCHES */}
 
           <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
 
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-              Add availability
+              Your matches
             </p>
 
             <h2 className="mt-2 text-2xl font-bold">
-              When are you free?
+              Who do you want to meet?
             </h2>
 
-            <p className="mt-2 text-sm leading-relaxed text-gray-500">
-              Add a window of at least one hour.
-            </p>
-
-            {/* DAY */}
-
-            <div className="mt-6">
-
-              <label className="text-sm font-semibold text-gray-700">
-                Day
-              </label>
-
-              <select
-                value={selectedDay}
-                onChange={(e) =>
-                  setSelectedDay(
-                    Number(e.target.value)
-                  )
-                }
-                className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-black focus:bg-white"
-              >
-                {days.map((day) => (
-                  <option
-                    key={day.value}
-                    value={day.value}
-                  >
-                    {day.label}
-                  </option>
-                ))}
-              </select>
-
-            </div>
-
-            {/* TIMES */}
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-
-              <div>
-
-                <label className="text-sm font-semibold text-gray-700">
-                  Start
-                </label>
-
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) =>
-                    setStartTime(e.target.value)
-                  }
-                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-black focus:bg-white"
-                />
-
-              </div>
-
-              <div>
-
-                <label className="text-sm font-semibold text-gray-700">
-                  End
-                </label>
-
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) =>
-                    setEndTime(e.target.value)
-                  }
-                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-black focus:bg-white"
-                />
-
-              </div>
-
-            </div>
-
-            {/* ADD BUTTON */}
-
-            <button
-              type="button"
-              onClick={addAvailability}
-              disabled={saving}
-              className="mt-6 w-full rounded-2xl bg-black px-5 py-4 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving
-                ? 'Adding...'
-                : 'Add availability →'}
-            </button>
-
-          </section>
-
-          {/* CURRENT AVAILABILITY */}
-
-          <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-                  Your schedule
-                </p>
-
-                <h2 className="mt-2 text-2xl font-bold">
-                  Current availability
-                </h2>
-
-              </div>
-
-              <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
-                {availability.length}{' '}
-                {availability.length === 1
-                  ? 'window'
-                  : 'windows'}
-              </div>
-
-            </div>
-
-            {availability.length === 0 ? (
+            {matches.length === 0 ? (
 
               <div className="mt-6 rounded-2xl bg-gray-50 p-6 text-center">
 
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl shadow-sm">
-                  🕐
+                  👥
                 </div>
 
                 <h3 className="mt-4 font-semibold">
-                  No availability yet
+                  No active matches
                 </h3>
 
                 <p className="mt-1 text-sm leading-relaxed text-gray-500">
-                  Add your first availability window
-                  using the form.
+                  Head to Discover to find people to connect with.
                 </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push('/discover')
+                  }
+                  className="mt-5 rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white"
+                >
+                  Find matches →
+                </button>
 
               </div>
 
@@ -551,53 +1153,243 @@ export default function AvailabilityPage() {
 
               <div className="mt-6 space-y-3">
 
-                {availability.map((item) => (
+                {matches.map(
+                  (match) => {
 
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between rounded-2xl border border-gray-200/70 bg-gray-50 p-4"
-                  >
+                    const profile =
+                      getOtherProfile(
+                        match
+                      )
 
-                    <div>
+                    const isSelected =
+                      selectedMatch?.id ===
+                      match.id
 
-                      <p className="font-semibold">
-                        {getDayName(
-                          item.day_of_week
+                    return (
+                      <button
+                        key={match.id}
+                        type="button"
+                        onClick={() =>
+                          selectMatch(
+                            match
+                          )
+                        }
+                        className={`w-full rounded-2xl border p-4 text-left transition ${
+                          isSelected
+                            ? 'border-black bg-white shadow-sm'
+                            : 'border-gray-200/70 bg-gray-50 hover:bg-white'
+                        }`}
+                      >
+
+                        <p className="font-semibold">
+                          {getProfileName(
+                            match
+                          )}
+                        </p>
+
+                        {profile?.major && (
+                          <p className="mt-1 text-sm text-gray-500">
+                            {profile.major}
+                          </p>
                         )}
-                      </p>
 
-                      <p className="mt-1 text-sm text-gray-500">
-                        {formatTime(
-                          item.start_time
+                        {profile?.career_goal && (
+                          <p className="mt-1 text-sm text-gray-400">
+                            {profile.career_goal}
+                          </p>
                         )}
-                        {' – '}
-                        {formatTime(
-                          item.end_time
-                        )}
-                      </p>
 
-                    </div>
+                      </button>
+                    )
+                  }
+                )}
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        deleteAvailability(
-                          item.id
-                        )
-                      }
-                      disabled={
-                        deletingId === item.id
-                      }
-                      className="rounded-xl px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {deletingId === item.id
-                        ? 'Removing...'
-                        : 'Remove'}
-                    </button>
+              </div>
 
+            )}
+
+          </section>
+
+          {/* SCHEDULING AREA */}
+
+          <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
+
+            {!selectedMatch ? (
+
+              <div className="flex min-h-[400px] items-center justify-center text-center">
+
+                <div>
+
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-50 text-2xl">
+                    ☕
                   </div>
 
-                ))}
+                  <h2 className="mt-5 text-2xl font-bold">
+                    Pick a match
+                  </h2>
+
+                  <p className="mt-2 max-w-sm text-sm leading-relaxed text-gray-500">
+                    Select someone from the left to find a time that works for both of you.
+                  </p>
+
+                </div>
+
+              </div>
+
+            ) : (
+
+              <div>
+
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                  Schedule with
+                </p>
+
+                <h2 className="mt-2 text-3xl font-bold">
+                  {getProfileName(
+                    selectedMatch
+                  )}
+                </h2>
+
+                <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                  These are the times when your availability overlaps.
+                </p>
+
+                {/* LOADING */}
+
+                {loadingTimes && (
+                  <div className="mt-8 rounded-2xl bg-gray-50 p-6 text-center">
+
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+                      🕐
+                    </div>
+
+                    <p className="mt-4 text-sm font-medium text-gray-500">
+                      Finding overlapping times...
+                    </p>
+
+                  </div>
+                )}
+
+                {/* NO OVERLAPS */}
+
+                {!loadingTimes &&
+                  overlappingTimes.length === 0 && (
+                    <div className="mt-8 rounded-2xl bg-gray-50 p-6 text-center">
+
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+                        🗓️
+                      </div>
+
+                      <h3 className="mt-4 font-semibold">
+                        No available times
+                      </h3>
+
+                      <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                        You and your match don't currently have an available shared time.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(
+                            '/availability'
+                          )
+                        }
+                        className="mt-5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+                      >
+                        Manage my availability
+                      </button>
+
+                    </div>
+                  )}
+
+                {/* AVAILABLE TIMES */}
+
+                {!loadingTimes &&
+                  overlappingTimes.length > 0 && (
+                    <div className="mt-8">
+
+                      <p className="text-sm font-semibold text-gray-700">
+                        Available times
+                      </p>
+
+                      <div className="mt-4 space-y-3">
+
+                        {overlappingTimes.map(
+                          (
+                            overlap,
+                            index
+                          ) => (
+
+                            <div
+                              key={`${overlap.date}-${overlap.start_time}-${overlap.end_time}-${index}`}
+                              className="rounded-2xl border border-gray-200/70 bg-gray-50 p-4"
+                            >
+
+                              <div className="flex items-start justify-between gap-4">
+
+                                <div>
+
+                                  <p className="font-semibold">
+                                    {formatDate(
+                                      overlap.date
+                                    )}
+                                  </p>
+
+                                  <p className="mt-1 text-sm text-gray-500">
+                                    {formatTime(
+                                      overlap.start_time
+                                    )}
+                                    {' – '}
+                                    {formatTime(
+                                      overlap.end_time
+                                    )}
+                                  </p>
+
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    scheduleMeeting(
+                                      overlap
+                                    )
+                                  }
+                                  disabled={
+                                    scheduling
+                                  }
+                                  className="shrink-0 rounded-xl bg-black px-4 py-3 text-xs font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {scheduling
+                                    ? 'Scheduling...'
+                                    : 'Schedule →'}
+                                </button>
+
+                              </div>
+
+                            </div>
+
+                          )
+                        )}
+
+                      </div>
+
+                    </div>
+                  )}
+
+                {/* MANAGE AVAILABILITY */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      '/availability'
+                    )
+                  }
+                  className="mt-6 w-full rounded-2xl border border-gray-200 px-5 py-4 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                >
+                  Manage my availability
+                </button>
 
               </div>
 
@@ -607,21 +1399,147 @@ export default function AvailabilityPage() {
 
         </div>
 
-        {/* BACK TO SCHEDULE */}
+        {/* UPCOMING MEETINGS */}
 
-        <div className="mt-8 text-center">
+        <section className="mt-8 rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
 
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/schedule')
-            }
-            className="text-sm font-semibold text-gray-500 transition hover:text-black"
-          >
-            ← Back to scheduling
-          </button>
+          <div className="flex items-center justify-between">
 
-        </div>
+            <div>
+
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Upcoming
+              </p>
+
+              <h2 className="mt-2 text-2xl font-bold">
+                Your scheduled chats
+              </h2>
+
+            </div>
+
+            <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+              {upcomingMeetings.length}
+            </div>
+
+          </div>
+
+          {upcomingMeetings.length === 0 ? (
+
+            <div className="mt-6 rounded-2xl bg-gray-50 p-6 text-center">
+
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+                📅
+              </div>
+
+              <h3 className="mt-4 font-semibold">
+                No meetings scheduled
+              </h3>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Choose a match above to schedule your first coffee chat.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="mt-6 space-y-3">
+
+              {upcomingMeetings.map(
+                (meeting) => {
+
+                  const meetingMatch =
+                    matches.find(
+                      (match) =>
+                        match.id ===
+                        meeting.match_id
+                    )
+
+                  return (
+                    <div
+                      key={meeting.id}
+                      className="rounded-2xl border border-gray-200/70 bg-gray-50 p-4"
+                    >
+
+                      <div className="flex items-start justify-between gap-4">
+
+                        <div>
+
+                          <p className="font-semibold">
+                            {meetingMatch
+                              ? getProfileName(
+                                  meetingMatch
+                                )
+                              : 'BrewLink match'}
+                          </p>
+
+                          <p className="mt-2 font-medium">
+                            {meeting.scheduled_date
+                              ? formatDate(
+                                  meeting.scheduled_date
+                                )
+                              : 'Date not set'}
+                          </p>
+
+                          {meeting.start_time && (
+                            <p className="mt-1 text-sm text-gray-500">
+                              {formatTime(
+                                meeting.start_time
+                              )}
+
+                              {meeting.end_time &&
+                                ` – ${formatTime(
+                                  meeting.end_time
+                                )}`}
+                            </p>
+                          )}
+
+                          {meeting.location && (
+                            <p className="mt-1 text-sm text-gray-500">
+                              📍{' '}
+                              {meeting.location}
+                            </p>
+                          )}
+
+                          {meeting.status && (
+                            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-green-600">
+                              {meeting.status}
+                            </p>
+                          )}
+
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            cancelMeeting(
+                              meeting.id
+                            )
+                          }
+                          disabled={
+                            cancelling ===
+                            meeting.id
+                          }
+                          className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {cancelling ===
+                          meeting.id
+                            ? 'Cancelling...'
+                            : 'Cancel'}
+                        </button>
+
+                      </div>
+
+                    </div>
+                  )
+                }
+              )}
+
+            </div>
+
+          )}
+
+        </section>
 
       </div>
 

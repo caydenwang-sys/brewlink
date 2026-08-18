@@ -1,15 +1,8 @@
 'use client'
 
-import {
-  useEffect,
-  useState,
-} from 'react'
-import {
-  createClient,
-} from '@/lib/supabase/client'
-import {
-  useRouter,
-} from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 type Availability = {
   id: number
@@ -19,112 +12,79 @@ type Availability = {
   end_time: string
 }
 
-type Day = {
-  value: number
-  name: string
+const days = [
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+  { value: 7, label: 'Sunday' },
+]
+
+function formatTime(time: string) {
+  const [hours, minutes] = time.split(':').map(Number)
+
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }
 
-const days: Day[] = [
-  {
-    value: 0,
-    name: 'Sunday',
-  },
-  {
-    value: 1,
-    name: 'Monday',
-  },
-  {
-    value: 2,
-    name: 'Tuesday',
-  },
-  {
-    value: 3,
-    name: 'Wednesday',
-  },
-  {
-    value: 4,
-    name: 'Thursday',
-  },
-  {
-    value: 5,
-    name: 'Friday',
-  },
-  {
-    value: 6,
-    name: 'Saturday',
-  },
-]
+function timeToMinutes(time: string) {
+  const [hours, minutes] = time.split(':').map(Number)
+
+  return hours * 60 + minutes
+}
 
 export default function AvailabilityPage() {
   const router = useRouter()
 
-  const [currentUserId, setCurrentUserId] =
-    useState('')
+  const [availability, setAvailability] = useState<Availability[]>([])
 
-  const [availability, setAvailability] =
-    useState<Availability[]>([])
+  const [selectedDay, setSelectedDay] = useState(1)
+  const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('10:00')
 
-  const [loading, setLoading] =
-    useState(true)
+  // ID of the availability window currently being edited.
+  // null means we are adding a new window.
+  const [editingId, setEditingId] = useState<number | null>(null)
 
-  const [saving, setSaving] =
-    useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  const [error, setError] =
-    useState('')
-
-  const [success, setSuccess] =
-    useState('')
-
-  // ============================================
-  // FORM STATE
-  // ============================================
-
-  const [selectedDay, setSelectedDay] =
-    useState(1)
-
-  const [startTime, setStartTime] =
-    useState('09:00')
-
-  const [endTime, setEndTime] =
-    useState('17:00')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   // ============================================
   // LOAD AVAILABILITY
   // ============================================
 
-  async function loadAvailability() {
-    const supabase = createClient()
+  useEffect(() => {
+    async function loadAvailability() {
+      const supabase = createClient()
 
-    setLoading(true)
-    setError('')
+      setLoading(true)
+      setError('')
 
-    // ============================================
-    // GET CURRENT USER
-    // ============================================
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    const {
-      data: { user },
-      error: userError,
-    } =
-      await supabase.auth.getUser()
+      if (userError || !user) {
+        router.push('/login')
+        return
+      }
 
-    if (userError || !user) {
-      router.push('/login')
-      return
-    }
-
-    setCurrentUserId(user.id)
-
-    // ============================================
-    // LOAD AVAILABILITY
-    // ============================================
-
-    const {
-      data,
-      error: availabilityError,
-    } =
-      await supabase
+      const {
+        data,
+        error: availabilityError,
+      } = await supabase
         .from('availability')
         .select(`
           id,
@@ -133,120 +93,182 @@ export default function AvailabilityPage() {
           start_time,
           end_time
         `)
-        .eq(
-          'user_id',
-          user.id
-        )
-        .order(
-          'day_of_week',
-          {
-            ascending: true,
-          }
-        )
-        .order(
-          'start_time',
-          {
-            ascending: true,
-          }
+        .eq('user_id', user.id)
+        .order('day_of_week', {
+          ascending: true,
+        })
+        .order('start_time', {
+          ascending: true,
+        })
+
+      if (availabilityError) {
+        console.error(
+          'Could not load availability:',
+          availabilityError
         )
 
-    if (availabilityError) {
-      console.error(
-        'Could not load availability:',
-        availabilityError
-      )
+        setError('Could not load your availability.')
+        setLoading(false)
+        return
+      }
 
-      setError(
-        'Could not load your availability.'
-      )
-
+      setAvailability((data || []) as Availability[])
       setLoading(false)
-      return
     }
 
-    setAvailability(
-      data || []
-    )
-
-    setLoading(false)
-  }
-
-  // ============================================
-  // INITIAL LOAD
-  // ============================================
-
-  useEffect(() => {
     loadAvailability()
   }, [router])
 
   // ============================================
-  // ADD AVAILABILITY
+  // START EDITING
   // ============================================
 
-  async function addAvailability() {
+  function startEditing(item: Availability) {
+    setEditingId(item.id)
+    setSelectedDay(item.day_of_week)
+
+    // Supabase TIME values usually come back as HH:MM:SS.
+    // The input[type="time"] needs HH:MM.
+    setStartTime(item.start_time.slice(0, 5))
+    setEndTime(item.end_time.slice(0, 5))
+
     setError('')
     setSuccess('')
 
-    // ============================================
-    // VALIDATE TIMES
-    // ============================================
+    // Scroll back to the form on smaller screens.
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
 
-    if (
-      !startTime ||
-      !endTime
-    ) {
-      setError(
-        'Please choose a start and end time.'
-      )
+  // ============================================
+  // CANCEL EDITING
+  // ============================================
 
+  function cancelEditing() {
+    setEditingId(null)
+
+    setSelectedDay(1)
+    setStartTime('09:00')
+    setEndTime('10:00')
+
+    setError('')
+    setSuccess('')
+  }
+
+  // ============================================
+  // SAVE AVAILABILITY
+  // ============================================
+
+  async function saveAvailability() {
+    if (saving) {
       return
     }
 
-    if (
-      startTime >= endTime
-    ) {
-      setError(
-        'End time must be after start time.'
-      )
+    setError('')
+    setSuccess('')
 
+    const startMinutes = timeToMinutes(startTime)
+    const endMinutes = timeToMinutes(endTime)
+
+    // ==========================================
+    // VALIDATE TIME ORDER
+    // ==========================================
+
+    if (endMinutes <= startMinutes) {
+      setError(
+        'End time must be later than start time.'
+      )
       return
     }
 
-    if (!currentUserId) {
-      setError(
-        'You must be logged in.'
-      )
+    // ==========================================
+    // REQUIRE AT LEAST ONE HOUR
+    // ==========================================
 
+    if (endMinutes - startMinutes < 60) {
+      setError(
+        'Availability must be at least one hour long.'
+      )
       return
     }
 
-    setSaving(true)
+    // ==========================================
+    // CHECK FOR OVERLAPPING AVAILABILITY
+    // ==========================================
+
+    const overlapping = availability.some((item) => {
+      // When editing, ignore the current window.
+      if (
+        editingId !== null &&
+        item.id === editingId
+      ) {
+        return false
+      }
+
+      // Only compare availability on the same day.
+      if (item.day_of_week !== selectedDay) {
+        return false
+      }
+
+      const existingStart = timeToMinutes(
+        item.start_time
+      )
+
+      const existingEnd = timeToMinutes(
+        item.end_time
+      )
+
+      return (
+        startMinutes < existingEnd &&
+        existingStart < endMinutes
+      )
+    })
+
+    if (overlapping) {
+      setError(
+        'This time overlaps with an existing availability window.'
+      )
+      return
+    }
 
     const supabase = createClient()
 
-    // ============================================
-    // INSERT
-    // ============================================
+    setSaving(true)
+
+    // ==========================================
+    // GET CURRENT USER
+    // ==========================================
 
     const {
-      data,
-      error: insertError,
-    } =
-      await supabase
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      router.push('/login')
+      setSaving(false)
+      return
+    }
+
+    // ==========================================
+    // EDIT EXISTING AVAILABILITY
+    // ==========================================
+
+    if (editingId !== null) {
+      const {
+        data: updatedAvailability,
+        error: updateError,
+      } = await supabase
         .from('availability')
-        .insert({
-          user_id:
-            currentUserId,
-
-          day_of_week:
-            selectedDay,
-
-          start_time:
-            startTime,
-
-          end_time:
-            endTime,
+        .update({
+          day_of_week: selectedDay,
+          start_time: `${startTime}:00`,
+          end_time: `${endTime}:00`,
         })
+        .eq('id', editingId)
+        .eq('user_id', user.id)
         .select(`
           id,
           user_id,
@@ -256,6 +278,79 @@ export default function AvailabilityPage() {
         `)
         .single()
 
+      if (updateError) {
+        console.error(
+          'Could not update availability:',
+          updateError
+        )
+
+        setError(
+          'Could not update your availability. Please try again.'
+        )
+
+        setSaving(false)
+        return
+      }
+
+      // Replace the old availability window
+      // with the updated version.
+      setAvailability((current) =>
+        current
+          .map((item) =>
+            item.id === editingId
+              ? (updatedAvailability as Availability)
+              : item
+          )
+          .sort((a, b) => {
+            if (a.day_of_week !== b.day_of_week) {
+              return a.day_of_week - b.day_of_week
+            }
+
+            return (
+              timeToMinutes(a.start_time) -
+              timeToMinutes(b.start_time)
+            )
+          })
+      )
+
+      setSuccess('Availability updated.')
+
+      // Exit edit mode.
+      setEditingId(null)
+
+      setSelectedDay(1)
+      setStartTime('09:00')
+      setEndTime('10:00')
+
+      setSaving(false)
+
+      return
+    }
+
+    // ==========================================
+    // ADD NEW AVAILABILITY
+    // ==========================================
+
+    const {
+      data: newAvailability,
+      error: insertError,
+    } = await supabase
+      .from('availability')
+      .insert({
+        user_id: user.id,
+        day_of_week: selectedDay,
+        start_time: `${startTime}:00`,
+        end_time: `${endTime}:00`,
+      })
+      .select(`
+        id,
+        user_id,
+        day_of_week,
+        start_time,
+        end_time
+      `)
+      .single()
+
     if (insertError) {
       console.error(
         'Could not add availability:',
@@ -263,44 +358,29 @@ export default function AvailabilityPage() {
       )
 
       setError(
-        'Could not save this availability block.'
+        'Could not save your availability. Please try again.'
       )
 
       setSaving(false)
       return
     }
 
-    // ============================================
-    // UPDATE LOCAL STATE
-    // ============================================
-
-    setAvailability(
-      (current) =>
-        [
-          ...current,
-          data,
-        ].sort(
-          (a, b) => {
-            if (
-              a.day_of_week !==
-              b.day_of_week
-            ) {
-              return (
-                a.day_of_week -
-                b.day_of_week
-              )
-            }
-
-            return a.start_time.localeCompare(
-              b.start_time
-            )
+    setAvailability((current) =>
+      [...current, newAvailability as Availability].sort(
+        (a, b) => {
+          if (a.day_of_week !== b.day_of_week) {
+            return a.day_of_week - b.day_of_week
           }
-        )
+
+          return (
+            timeToMinutes(a.start_time) -
+            timeToMinutes(b.start_time)
+          )
+        }
+      )
     )
 
-    setSuccess(
-      'Availability added.'
-    )
+    setSuccess('Availability added.')
 
     setSaving(false)
   }
@@ -309,28 +389,24 @@ export default function AvailabilityPage() {
   // DELETE AVAILABILITY
   // ============================================
 
-  async function deleteAvailability(
-    availabilityId: number
-  ) {
+  async function deleteAvailability(id: number) {
+    if (deletingId !== null) {
+      return
+    }
+
     setError('')
     setSuccess('')
 
     const supabase = createClient()
 
+    setDeletingId(id)
+
     const {
       error: deleteError,
-    } =
-      await supabase
-        .from('availability')
-        .delete()
-        .eq(
-          'id',
-          availabilityId
-        )
-        .eq(
-          'user_id',
-          currentUserId
-        )
+    } = await supabase
+      .from('availability')
+      .delete()
+      .eq('id', id)
 
     if (deleteError) {
       console.error(
@@ -339,69 +415,36 @@ export default function AvailabilityPage() {
       )
 
       setError(
-        'Could not delete this availability block.'
+        'Could not delete this availability. Please try again.'
       )
 
+      setDeletingId(null)
       return
     }
 
-    setAvailability(
-      (current) =>
-        current.filter(
-          (item) =>
-            item.id !==
-            availabilityId
-        )
+    // If the deleted item was being edited,
+    // exit edit mode.
+    if (editingId === id) {
+      cancelEditing()
+    }
+
+    setAvailability((current) =>
+      current.filter((item) => item.id !== id)
     )
 
-    setSuccess(
-      'Availability removed.'
-    )
-  }
+    setSuccess('Availability removed.')
 
-  // ============================================
-  // FORMAT TIME
-  // ============================================
-
-  function formatTime(
-    time: string
-  ) {
-    const [hours, minutes] =
-      time.split(':').map(Number)
-
-    const date =
-      new Date()
-
-    date.setHours(
-      hours,
-      minutes,
-      0,
-      0
-    )
-
-    return date.toLocaleTimeString(
-      [],
-      {
-        hour: 'numeric',
-        minute: '2-digit',
-      }
-    )
+    setDeletingId(null)
   }
 
   // ============================================
   // GET DAY NAME
   // ============================================
 
-  function getDayName(
-    dayValue: number
-  ) {
+  function getDayName(day: number) {
     return (
-      days.find(
-        (day) =>
-          day.value ===
-          dayValue
-      )?.name ||
-      'Unknown'
+      days.find((item) => item.value === day)?.label ||
+      'Unknown day'
     )
   }
 
@@ -412,11 +455,10 @@ export default function AvailabilityPage() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5]">
-
         <div className="text-center">
 
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm">
-            🗓️
+            ☕
           </div>
 
           <p className="mt-4 text-sm font-medium text-gray-500">
@@ -424,7 +466,6 @@ export default function AvailabilityPage() {
           </p>
 
         </div>
-
       </main>
     )
   }
@@ -436,9 +477,7 @@ export default function AvailabilityPage() {
   return (
     <main className="min-h-screen bg-[#f7f7f5] pb-28">
 
-      {/* ======================================== */}
       {/* HEADER */}
-      {/* ======================================== */}
 
       <header className="sticky top-0 z-30 border-b border-gray-200/70 bg-white/90 backdrop-blur">
 
@@ -468,328 +507,324 @@ export default function AvailabilityPage() {
 
       </header>
 
-      {/* ======================================== */}
       {/* MAIN */}
-      {/* ======================================== */}
 
-      <div className="mx-auto max-w-3xl px-5 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-4xl px-5 py-8 sm:px-6 sm:py-12">
 
-        {/* ====================================== */}
         {/* TITLE */}
-        {/* ====================================== */}
 
-        <section className="mb-8">
+        <section className="mb-10">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
             BrewLink
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-            Availability
+            Your availability.
           </h1>
 
           <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-500">
-            Tell BrewLink when you're available
-            to meet with your connections.
+            Add the times you're usually available
+            for coffee chats. BrewLink will use these
+            times to find matches that work for both
+            people.
           </p>
 
         </section>
 
-        {/* ====================================== */}
         {/* ERROR */}
-        {/* ====================================== */}
 
         {error && (
-          <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
+          <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
             {error}
           </div>
         )}
 
-        {/* ====================================== */}
         {/* SUCCESS */}
-        {/* ====================================== */}
 
         {success && (
-          <div className="mb-5 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm text-green-700">
+          <div className="mb-6 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm text-green-700">
             {success}
           </div>
         )}
 
-        {/* ====================================== */}
-        {/* ADD AVAILABILITY */}
-        {/* ====================================== */}
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
 
-        <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm sm:p-8">
+          {/* ADD / EDIT AVAILABILITY */}
 
-          <div className="mb-6">
+          <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
 
-            <h2 className="text-lg font-bold">
-              Add availability
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              Add a time block when you're
-              normally available.
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+              {editingId !== null
+                ? 'Edit availability'
+                : 'Add availability'}
             </p>
 
-          </div>
+            <h2 className="mt-2 text-2xl font-bold">
+              {editingId !== null
+                ? 'Change your schedule.'
+                : 'When are you free?'}
+            </h2>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
+              {editingId !== null
+                ? 'Update the day or time for this availability window.'
+                : 'Add a window of at least one hour.'}
+            </p>
 
             {/* DAY */}
 
-            <div>
+            <div className="mt-6">
 
-              <label className="mb-2 block text-sm font-semibold">
+              <label className="text-sm font-semibold text-gray-700">
                 Day
               </label>
 
               <select
                 value={selectedDay}
-                onChange={(event) =>
+                onChange={(e) =>
                   setSelectedDay(
-                    Number(
-                      event.target.value
-                    )
+                    Number(e.target.value)
                   )
                 }
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-gray-400 focus:bg-white"
+                className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-black focus:bg-white"
               >
-
-                {days.map(
-                  (day) => (
-                    <option
-                      key={
-                        day.value
-                      }
-                      value={
-                        day.value
-                      }
-                    >
-                      {day.name}
-                    </option>
-                  )
-                )}
-
+                {days.map((day) => (
+                  <option
+                    key={day.value}
+                    value={day.value}
+                  >
+                    {day.label}
+                  </option>
+                ))}
               </select>
 
             </div>
 
-            {/* START */}
+            {/* TIMES */}
 
-            <div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
 
-              <label className="mb-2 block text-sm font-semibold">
-                Start time
-              </label>
+              <div>
 
-              <input
-                type="time"
-                value={startTime}
-                onChange={(event) =>
-                  setStartTime(
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-gray-400 focus:bg-white"
-              />
+                <label className="text-sm font-semibold text-gray-700">
+                  Start
+                </label>
 
-            </div>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) =>
+                    setStartTime(e.target.value)
+                  }
+                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-black focus:bg-white"
+                />
 
-            {/* END */}
+              </div>
 
-            <div>
+              <div>
 
-              <label className="mb-2 block text-sm font-semibold">
-                End time
-              </label>
+                <label className="text-sm font-semibold text-gray-700">
+                  End
+                </label>
 
-              <input
-                type="time"
-                value={endTime}
-                onChange={(event) =>
-                  setEndTime(
-                    event.target.value
-                  )
-                }
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-gray-400 focus:bg-white"
-              />
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) =>
+                    setEndTime(e.target.value)
+                  }
+                  className="mt-2 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-black focus:bg-white"
+                />
+
+              </div>
 
             </div>
 
-          </div>
+            {/* SAVE BUTTON */}
+
+            <button
+              type="button"
+              onClick={saveAvailability}
+              disabled={saving}
+              className="mt-6 w-full rounded-2xl bg-black px-5 py-4 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving
+                ? editingId !== null
+                  ? 'Saving...'
+                  : 'Adding...'
+                : editingId !== null
+                  ? 'Save changes →'
+                  : 'Add availability →'}
+            </button>
+
+            {/* CANCEL EDIT */}
+
+            {editingId !== null && (
+              <button
+                type="button"
+                onClick={cancelEditing}
+                disabled={saving}
+                className="mt-3 w-full rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
+
+          </section>
+
+          {/* CURRENT AVAILABILITY */}
+
+          <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                  Your schedule
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold">
+                  Current availability
+                </h2>
+
+              </div>
+
+              <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+                {availability.length}{' '}
+                {availability.length === 1
+                  ? 'window'
+                  : 'windows'}
+              </div>
+
+            </div>
+
+            {availability.length === 0 ? (
+
+              <div className="mt-6 rounded-2xl bg-gray-50 p-6 text-center">
+
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+                  🕐
+                </div>
+
+                <h3 className="mt-4 font-semibold">
+                  No availability yet
+                </h3>
+
+                <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                  Add your first availability window
+                  using the form.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="mt-6 space-y-3">
+
+                {availability.map((item) => (
+
+                  <div
+                    key={item.id}
+                    className={`flex items-center justify-between rounded-2xl border p-4 transition ${
+                      editingId === item.id
+                        ? 'border-black bg-white shadow-sm'
+                        : 'border-gray-200/70 bg-gray-50'
+                    }`}
+                  >
+
+                    <div>
+
+                      <p className="font-semibold">
+                        {getDayName(
+                          item.day_of_week
+                        )}
+                      </p>
+
+                      <p className="mt-1 text-sm text-gray-500">
+                        {formatTime(
+                          item.start_time
+                        )}
+                        {' – '}
+                        {formatTime(
+                          item.end_time
+                        )}
+                      </p>
+
+                    </div>
+
+                    <div className="flex items-center gap-2">
+
+                      {/* EDIT */}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          startEditing(item)
+                        }
+                        disabled={
+                          saving ||
+                          deletingId !== null
+                        }
+                        className="rounded-xl px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Edit
+                      </button>
+
+                      {/* REMOVE */}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          deleteAvailability(
+                            item.id
+                          )
+                        }
+                        disabled={
+                          deletingId === item.id ||
+                          saving
+                        }
+                        className="rounded-xl px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === item.id
+                          ? 'Removing...'
+                          : 'Remove'}
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
+
+          </section>
+
+        </div>
+
+        {/* BACK TO SCHEDULE */}
+
+        <div className="mt-8 text-center">
 
           <button
             type="button"
-            onClick={addAvailability}
-            disabled={saving}
-            className="mt-5 w-full rounded-xl bg-black px-5 py-3 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() =>
+              router.push('/schedule')
+            }
+            className="text-sm font-semibold text-gray-500 transition hover:text-black"
           >
-            {saving
-              ? 'Saving...'
-              : '+ Add availability'}
+            ← Back to scheduling
           </button>
-
-        </section>
-
-        {/* ====================================== */}
-        {/* CURRENT AVAILABILITY */}
-        {/* ====================================== */}
-
-        <section className="mt-8">
-
-          <div className="mb-4">
-
-            <h2 className="text-lg font-bold">
-              Your weekly availability
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              These are the times BrewLink can
-              use when finding meeting times.
-            </p>
-
-          </div>
-
-          {availability.length === 0 ? (
-
-            <div className="rounded-3xl border border-gray-200/70 bg-white p-8 text-center shadow-sm">
-
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
-                🗓️
-              </div>
-
-              <h3 className="mt-4 font-semibold">
-                No availability yet
-              </h3>
-
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
-                Add some times above so BrewLink
-                can find overlapping availability
-                with your connections.
-              </p>
-
-            </div>
-
-          ) : (
-
-            <div className="space-y-3">
-
-              {days.map(
-                (day) => {
-
-                  const dayAvailability =
-                    availability.filter(
-                      (item) =>
-                        item.day_of_week ===
-                        day.value
-                    )
-
-                  return (
-                    <div
-                      key={
-                        day.value
-                      }
-                      className="rounded-2xl border border-gray-200/70 bg-white p-5 shadow-sm"
-                    >
-
-                      <div className="flex items-center justify-between">
-
-                        <h3 className="font-bold">
-                          {day.name}
-                        </h3>
-
-                        {dayAvailability.length === 0 && (
-                          <span className="text-xs text-gray-400">
-                            No availability
-                          </span>
-                        )}
-
-                      </div>
-
-                      {dayAvailability.length > 0 && (
-
-                        <div className="mt-3 space-y-2">
-
-                          {dayAvailability.map(
-                            (item) => (
-
-                              <div
-                                key={
-                                  item.id
-                                }
-                                className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
-                              >
-
-                                <span className="text-sm font-medium">
-                                  {formatTime(
-                                    item.start_time
-                                  )}
-                                  {' – '}
-                                  {formatTime(
-                                    item.end_time
-                                  )}
-                                </span>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    deleteAvailability(
-                                      item.id
-                                    )
-                                  }
-                                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-400 transition hover:bg-red-50 hover:text-red-600"
-                                >
-                                  Remove
-                                </button>
-
-                              </div>
-
-                            )
-                          )}
-
-                        </div>
-
-                      )}
-
-                    </div>
-                  )
-                }
-              )}
-
-            </div>
-
-          )}
-
-        </section>
-
-        {/* ====================================== */}
-        {/* NEXT STEP */}
-        {/* ====================================== */}
-
-        <div className="mt-8 rounded-3xl border border-gray-200/70 bg-gray-100 p-6">
-
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-gray-400">
-            Coming next
-          </p>
-
-          <h3 className="mt-2 text-lg font-bold">
-            Find overlapping availability
-          </h3>
-
-          <p className="mt-2 text-sm leading-relaxed text-gray-500">
-            Once both users have entered their
-            availability, BrewLink will find
-            the times that work for both people.
-          </p>
 
         </div>
 
       </div>
 
-      {/* ======================================== */}
       {/* BOTTOM NAV */}
-      {/* ======================================== */}
 
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white">
 
