@@ -672,15 +672,55 @@ export default function SchedulePage() {
     const availableOverlaps =
       uniqueOverlaps.filter(
         (overlap) => {
+          const overlapStart =
+            timeToMinutes(
+              overlap.start_time
+            )
+
+          const overlapEnd =
+            timeToMinutes(
+              overlap.end_time
+            )
+
           const alreadyBooked =
             meetings.some(
-              (meeting) =>
-                meeting.match_id ===
-                  match.id &&
-                meeting.scheduled_date ===
-                  overlap.date &&
-                meeting.status !==
-                  'cancelled'
+              (meeting) => {
+
+                if (
+                  meeting.match_id !==
+                    match.id ||
+                  meeting.scheduled_date !==
+                    overlap.date ||
+                  !meeting.start_time ||
+                  (
+                    meeting.status !==
+                      'pending' &&
+                    meeting.status !==
+                      'scheduled'
+                  )
+                ) {
+                  return false
+                }
+
+                const meetingStart =
+                  timeToMinutes(
+                    meeting.start_time
+                  )
+
+                const meetingEnd =
+                  meeting.end_time
+                    ? timeToMinutes(
+                        meeting.end_time
+                      )
+                    : meetingStart + 60
+
+                return (
+                  overlapStart <
+                    meetingEnd &&
+                  overlapEnd >
+                    meetingStart
+                )
+              }
             )
 
           return !alreadyBooked
@@ -780,6 +820,7 @@ export default function SchedulePage() {
   ) {
     if (
       !selectedMatch ||
+      !userId ||
       scheduling
     ) {
       return
@@ -791,8 +832,20 @@ export default function SchedulePage() {
 
     const supabase = createClient()
 
+    const otherUserId =
+      getOtherUserId(selectedMatch)
+
+    if (!otherUserId) {
+      setError(
+        'Could not determine who to send this coffee chat request to.'
+      )
+
+      setScheduling(false)
+      return
+    }
+
     // ------------------------------------------
-    // CHECK FOR EXISTING MEETING
+    // CHECK FOR EXISTING MEETING / REQUEST
     // ------------------------------------------
 
     const {
@@ -818,10 +871,14 @@ export default function SchedulePage() {
           'scheduled_date',
           overlap.date
         )
-        .neq(
+        .in(
           'status',
-          'cancelled'
+          [
+            'pending',
+            'scheduled',
+          ]
         )
+        .limit(1)
         .maybeSingle()
 
     if (existingMeetingError) {
@@ -839,7 +896,7 @@ export default function SchedulePage() {
 
     if (existingMeeting) {
       setError(
-        'You already have a meeting scheduled with this match on this date.'
+        'You already have a coffee chat or pending request with this match on this date.'
       )
 
       setScheduling(false)
@@ -854,7 +911,7 @@ export default function SchedulePage() {
     }
 
     // ------------------------------------------
-    // INSERT MEETING
+    // CREATE PENDING COFFEE CHAT REQUEST
     // ------------------------------------------
 
     const {
@@ -880,7 +937,16 @@ export default function SchedulePage() {
             location.trim() || null,
 
           status:
-            'scheduled',
+            'pending',
+
+          proposed_by:
+            userId,
+
+          responded_by:
+            null,
+
+          responded_at:
+            null,
         })
         .select(`
           id,
@@ -900,7 +966,7 @@ export default function SchedulePage() {
       )
 
       setError(
-        `Could not schedule this meeting: ${meetingError.message}`
+        `Could not send this coffee chat request: ${meetingError.message}`
       )
 
       setScheduling(false)
@@ -921,7 +987,7 @@ export default function SchedulePage() {
     }
 
     // ------------------------------------------
-    // REMOVE SCHEDULED SLOT
+    // REMOVE REQUESTED SLOT
     // ------------------------------------------
 
     setOverlappingTimes(
@@ -942,9 +1008,9 @@ export default function SchedulePage() {
     // ------------------------------------------
 
     setSuccess(
-      `Coffee chat scheduled with ${getProfileName(
+      `Coffee chat request sent to ${getProfileName(
         selectedMatch
-      )}!`
+      )}! They'll need to accept it before the chat is confirmed.`
     )
 
     setScheduling(false)
@@ -1057,7 +1123,7 @@ export default function SchedulePage() {
   const upcomingMeetings =
     meetings.filter(
       (meeting) =>
-        meeting.status !== 'cancelled'
+        meeting.status === 'scheduled'
     )
 
   // ============================================
@@ -1450,8 +1516,8 @@ export default function SchedulePage() {
                                   className="shrink-0 rounded-xl bg-black px-4 py-3 text-xs font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {scheduling
-                                    ? 'Scheduling...'
-                                    : 'Schedule →'}
+                                    ? 'Sending...'
+                                    : 'Send request →'}
                                 </button>
 
                               </div>

@@ -344,13 +344,9 @@ export default function NotificationsPage() {
       notification.type ===
       'coffee_chat_request'
     ) {
-      if (notification.related_match_id) {
-        router.push(
-          `/schedule?match=${notification.related_match_id}`
-        )
-      } else {
-        router.push('/schedule')
-      }
+      router.push(
+        '/coffee-chats?view=calendar#requests'
+      )
 
       return
     }
@@ -394,14 +390,31 @@ export default function NotificationsPage() {
     }
 
     // ==========================================
-    // NEW MATCH / CONNECTION
+    // CONNECTION ACCEPTED
     // ==========================================
 
     if (
       notification.type ===
-        'new_match' ||
+      'connection_accepted'
+    ) {
+      if (notification.related_match_id) {
+        router.push(
+          `/schedule?match=${notification.related_match_id}`
+        )
+      } else {
+        router.push('/connections')
+      }
+
+      return
+    }
+
+    // ==========================================
+    // NEW MATCH
+    // ==========================================
+
+    if (
       notification.type ===
-        'connection_accepted'
+      'new_match'
     ) {
       router.push('/connections')
       return
@@ -733,19 +746,6 @@ export default function NotificationsPage() {
           )}
 
         </section>
-
-        {/* ====================================== */}
-        {/* BACK */}
-        {/* ====================================== */}
-
-        <button
-          onClick={() =>
-            router.push('/schedule')
-          }
-          className="mt-8 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-        >
-          ← Back to Schedule
-        </button>
 
       </div>
 

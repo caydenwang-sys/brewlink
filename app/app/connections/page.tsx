@@ -267,84 +267,59 @@ export default function ConnectionsPage() {
       return
     }
 
-    const { error: updateError } =
-      await supabase
+    // ============================================
+    // DECLINE REQUEST
+    // ============================================
+
+    if (newStatus === 'declined') {
+      const {
+        error: declineError,
+      } = await supabase
         .from('connections')
         .update({
-          status: newStatus,
+          status: 'declined',
         })
         .eq('id', connectionId)
         .eq('receiver_id', user.id)
         .eq('status', 'pending')
 
-    if (updateError) {
-      setError(
-        `Could not update request: ${updateError.message}`
-      )
-      setActionLoading(null)
-      return
-    }
-
-    // If accepted, create or reactivate a match.
-    if (newStatus === 'accepted') {
-      const {
-        data: existingMatch,
-        error: existingMatchError,
-      } = await supabase
-        .from('matches')
-        .select(`
-          id,
-          status
-        `)
-        .or(
-          `and(user_1_id.eq.${connection.sender_id},user_2_id.eq.${connection.receiver_id}),and(user_1_id.eq.${connection.receiver_id},user_2_id.eq.${connection.sender_id})`
-        )
-        .maybeSingle()
-
-      if (existingMatchError) {
+      if (declineError) {
         setError(
-          `Connection accepted, but match check failed: ${existingMatchError.message}`
+          `Could not decline request: ${declineError.message}`
         )
+
         setActionLoading(null)
-        await loadConnections()
         return
       }
+    }
 
-      if (!existingMatch) {
-        const { error: matchError } =
-          await supabase
-            .from('matches')
-            .insert({
-              user_1_id: connection.sender_id,
-              user_2_id: connection.receiver_id,
-              status: 'active',
-            })
+    // ============================================
+    // ACCEPT REQUEST
+    // ============================================
 
-        if (matchError) {
-          setError(
-            `Connection accepted, but match creation failed: ${matchError.message}`
-          )
+    if (newStatus === 'accepted') {
+      const {
+        error: acceptError,
+      } = await supabase.rpc(
+        'accept_connection_request',
+        {
+          p_connection_id:
+            connectionId,
         }
-      } else if (
-        existingMatch.status !== 'active'
-      ) {
-        const {
-          error: reactivateError,
-        } = await supabase
-          .from('matches')
-          .update({
-            status: 'active',
-          })
-          .eq(
-            'id',
-            existingMatch.id
-          )
+      )
 
-        if (reactivateError) {
-          setError(
-            `Connection accepted, but the existing match could not be reactivated: ${reactivateError.message}`
-          )
-        }
+      if (acceptError) {
+        console.error(
+          'Could not accept connection request:',
+          acceptError
+        )
+
+        setError(
+          `Could not accept request: ${acceptError.message}`
+        )
+
+        setActionLoading(null)
+        return
       }
     }
 

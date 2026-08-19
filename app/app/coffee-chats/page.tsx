@@ -28,6 +28,9 @@ type CoffeeChat = {
   end_time: string | null
   location: string | null
   status: string
+  proposed_by: string | null
+  responded_by: string | null
+  responded_at: string | null
   otherUser: Profile | null
 }
 
@@ -60,6 +63,12 @@ export default function CoffeeChatsPage() {
   const [cancellingId, setCancellingId] =
     useState<number | null>(null)
 
+  const [respondingId, setRespondingId] =
+    useState<number | null>(null)
+
+  const [currentUserId, setCurrentUserId] =
+    useState('')
+
   const [selectedChat, setSelectedChat] =
     useState<CoffeeChat | null>(null)
 
@@ -82,6 +91,10 @@ export default function CoffeeChatsPage() {
       router.push('/login')
       return
     }
+
+    setCurrentUserId(
+      user.id
+    )
 
     // ============================================
     // LOAD USER'S MATCHES
@@ -146,7 +159,10 @@ export default function CoffeeChatsPage() {
         start_time,
         end_time,
         location,
-        status
+        status,
+        proposed_by,
+        responded_by,
+        responded_at
       `)
       .in('match_id', matchIds)
       .order('scheduled_date', {
@@ -267,6 +283,12 @@ export default function CoffeeChatsPage() {
               meeting.location,
             status:
               meeting.status || 'scheduled',
+            proposed_by:
+              meeting.proposed_by,
+            responded_by:
+              meeting.responded_by,
+            responded_at:
+              meeting.responded_at,
             otherUser,
           }
         })
@@ -502,6 +524,93 @@ export default function CoffeeChatsPage() {
   }
 
   // ============================================
+  // RESPOND TO COFFEE CHAT REQUEST
+  // ============================================
+
+  async function respondToCoffeeChatRequest(
+    chat: CoffeeChat,
+    response: 'accepted' | 'declined'
+  ) {
+    if (
+      respondingId !== null ||
+      !currentUserId
+    ) {
+      return
+    }
+
+    if (
+      chat.status !== 'pending' ||
+      chat.proposed_by === currentUserId
+    ) {
+      return
+    }
+
+    const supabase = createClient()
+
+    setRespondingId(chat.id)
+    setError('')
+    setSuccess('')
+
+    const newStatus =
+      response === 'accepted'
+        ? 'scheduled'
+        : 'declined'
+
+    const {
+      error: updateError,
+    } = await supabase
+      .from('meetings')
+      .update({
+        status: newStatus,
+        responded_by: currentUserId,
+        responded_at:
+          new Date().toISOString(),
+      })
+      .eq('id', chat.id)
+      .eq('match_id', chat.match_id)
+      .eq('status', 'pending')
+
+    if (updateError) {
+      console.error(
+        'Could not respond to coffee chat request:',
+        updateError
+      )
+
+      setError(
+        `Could not ${response === 'accepted' ? 'accept' : 'decline'} this coffee chat request. Please try again.`
+      )
+
+      setRespondingId(null)
+      return
+    }
+
+    setCoffeeChats(
+      (currentChats) =>
+        currentChats.map(
+          (currentChat) =>
+            currentChat.id === chat.id
+              ? {
+                  ...currentChat,
+                  status: newStatus,
+                  responded_by:
+                    currentUserId,
+                  responded_at:
+                    new Date().toISOString(),
+                }
+              : currentChat
+        )
+    )
+
+    setSuccess(
+      response === 'accepted'
+        ? 'Coffee chat accepted. It is now confirmed and has been added to your upcoming chats.'
+        : 'Coffee chat request declined.'
+    )
+
+    setRespondingId(null)
+  }
+
+  // ============================================
   // CANCEL COFFEE CHAT
   // ============================================
 
@@ -654,11 +763,18 @@ export default function CoffeeChatsPage() {
   // SPLIT UPCOMING / PAST
   // ============================================
 
+  const pendingIncomingChats =
+    coffeeChats.filter(
+      (chat) =>
+        chat.status === 'pending' &&
+        chat.proposed_by !== currentUserId &&
+        isUpcoming(chat)
+    )
+
   const upcomingChats =
     coffeeChats.filter(
       (chat) =>
-        chat.status !== 'cancelled' &&
-        chat.status !== 'completed' &&
+        chat.status === 'scheduled' &&
         isUpcoming(chat)
     )
 
@@ -667,7 +783,10 @@ export default function CoffeeChatsPage() {
       (chat) =>
         chat.status === 'cancelled' ||
         chat.status === 'completed' ||
-        !isUpcoming(chat)
+        (
+          chat.status === 'scheduled' &&
+          !isUpcoming(chat)
+        )
     )
 
   const calendarDays =
@@ -808,6 +927,176 @@ export default function CoffeeChatsPage() {
           <div className="mb-6 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm text-green-700">
             {success}
           </div>
+        )}
+
+        {/* ============================================
+            COFFEE CHAT REQUESTS
+        ============================================ */}
+
+        {pendingIncomingChats.length > 0 && (
+
+          <section
+            id="requests"
+            className="mb-8 scroll-mt-24"
+          >
+
+            <div className="mb-5">
+
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Requests
+              </p>
+
+              <h2 className="mt-1 text-3xl font-bold tracking-tight">
+                Coffee chat requests
+              </h2>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Review proposed coffee chats before they are added to your schedule.
+              </p>
+
+            </div>
+
+            <div className="space-y-3">
+
+              {pendingIncomingChats.map(
+                (chat) => (
+
+                  <div
+                    key={chat.id}
+                    className="overflow-hidden rounded-[1.5rem] border border-gray-200/80 bg-white shadow-sm"
+                  >
+
+                    <div className="p-5 sm:p-6">
+
+                      <div className="flex items-start gap-4">
+
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-xl">
+                          ☕
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+
+                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
+                            Coffee chat request from
+                          </p>
+
+                          <h3 className="mt-1 text-xl font-bold tracking-tight">
+                            {getChatName(
+                              chat
+                            )}
+                          </h3>
+
+                          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+
+                            <div className="rounded-2xl bg-gray-50 p-3.5">
+
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                Date
+                              </p>
+
+                              <p className="mt-2 text-sm font-semibold text-gray-900">
+                                {formatDate(
+                                  chat.scheduled_date
+                                )}
+                              </p>
+
+                            </div>
+
+                            <div className="rounded-2xl bg-gray-50 p-3.5">
+
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                Time
+                              </p>
+
+                              <p className="mt-2 text-sm font-semibold text-gray-900">
+                                {formatTime(
+                                  chat.start_time
+                                )}
+
+                                {chat.end_time && (
+                                  <>
+                                    {' – '}
+                                    {formatTime(
+                                      chat.end_time
+                                    )}
+                                  </>
+                                )}
+                              </p>
+
+                            </div>
+
+                            <div className="rounded-2xl bg-gray-50 p-3.5">
+
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                Location
+                              </p>
+
+                              <p className="mt-2 break-words text-sm font-semibold text-gray-900">
+                                {chat.location ||
+                                  'Location not set'}
+                              </p>
+
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 border-t border-gray-100 bg-gray-50/60 p-4 sm:px-6">
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          respondToCoffeeChatRequest(
+                            chat,
+                            'declined'
+                          )
+                        }
+                        disabled={
+                          respondingId ===
+                          chat.id
+                        }
+                        className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {respondingId === chat.id
+                          ? 'Updating...'
+                          : 'Decline'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          respondToCoffeeChatRequest(
+                            chat,
+                            'accepted'
+                          )
+                        }
+                        disabled={
+                          respondingId ===
+                          chat.id
+                        }
+                        className="rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {respondingId === chat.id
+                          ? 'Updating...'
+                          : 'Accept'}
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+
+          </section>
+
         )}
 
         {/* ============================================

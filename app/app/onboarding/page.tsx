@@ -564,15 +564,15 @@ export default function OnboardingPage() {
 
   if (loadingProfile) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5]">
+      <main className="flex min-h-screen items-center justify-center bg-[#0B1D33]">
 
         <div className="text-center">
 
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FBFAF8] text-3xl shadow-sm">
             ☕
           </div>
 
-          <p className="mt-4 text-sm font-medium text-gray-500">
+          <p className="mt-4 text-sm font-medium text-[#816E62]">
             Loading your onboarding...
           </p>
 
@@ -583,25 +583,25 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f7f5]">
+    <main className="min-h-screen bg-[#0B1D33] md:flex md:justify-center md:py-6">
 
       {/* HEADER */}
 
-      <header className="border-b border-gray-200/70 bg-white">
+      <header className="border-b border-[#E7E1DA] bg-[#FBFAF8]">
 
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-5">
 
           <button
             type="button"
             onClick={() =>
               router.push('/')
             }
-            className="text-xl font-bold tracking-tight transition hover:opacity-70"
+            className="text-xl font-extrabold tracking-tight text-[#0B1D33] transition hover:opacity-70"
           >
             BrewLink
           </button>
 
-          <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
+          <span className="rounded-full bg-[#F3E7DF] px-3 py-1.5 text-xs font-bold text-[#C66E3D]">
             Step {currentStep} of{' '}
             {
               onboardingSteps.length
@@ -614,14 +614,14 @@ export default function OnboardingPage() {
 
       {/* PROGRESS */}
 
-      <div className="border-b border-gray-200/70 bg-white">
+      <div className="border-b border-[#E7E1DA] bg-[#FBFAF8]">
 
         <div className="mx-auto max-w-5xl px-5 pb-4 sm:px-6">
 
-          <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+          <div className="h-2 overflow-hidden rounded-full bg-[#E3DED8]">
 
             <div
-              className="h-full rounded-full bg-black transition-all"
+              className="h-full rounded-full bg-[#1E3457] transition-all"
               style={{
                 width:
                   `${progress}%`,
@@ -646,11 +646,11 @@ export default function OnboardingPage() {
                     className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold ${
                       step.number ===
                       currentStep
-                        ? 'bg-black text-white'
+                        ? 'bg-[#1E3457] text-white'
                         : step.number <
                           currentStep
                           ? 'bg-gray-300 text-white'
-                          : 'bg-gray-100 text-gray-400'
+                          : 'bg-[#EEEAE5] text-[#A2958D]'
                     }`}
                   >
                     {
@@ -662,8 +662,8 @@ export default function OnboardingPage() {
                     className={`mt-1 truncate text-[10px] font-medium ${
                       step.number ===
                       currentStep
-                        ? 'text-black'
-                        : 'text-gray-400'
+                        ? 'text-[#0B1D33]'
+                        : 'text-[#A2958D]'
                     }`}
                   >
                     {
@@ -684,23 +684,23 @@ export default function OnboardingPage() {
 
       {/* CONTENT */}
 
-      <div className="mx-auto max-w-3xl px-5 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-5 sm:py-8">
 
         {/* STEP INTRO */}
 
         <section className="mb-8">
 
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
+          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#C66E3D]">
             Welcome to BrewLink
           </p>
 
-          <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
+          <h1 className="mt-2 text-[30px] font-extrabold leading-tight tracking-[-0.8px] text-[#0B1D33] sm:text-[34px]">
             {currentStep === 1
               ? 'Let\'s build your profile'
               : 'Career & about'}
           </h1>
 
-          <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
+          <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#816E62]">
             {currentStep === 1
               ? 'Start with your identity and academic information. If you return later, BrewLink will preload what you already saved.'
               : 'Add a primary career direction and a short bio. Both are optional and can be changed later.'}
@@ -710,11 +710,11 @@ export default function OnboardingPage() {
 
         {/* IMPORTANT INFO */}
 
-        <section className="mb-5 rounded-2xl border border-gray-200/70 bg-white p-4 shadow-sm">
+        <section className="mb-5 rounded-[18px] border border-[#E7E1DA] bg-[#F7F2EC] p-4">
 
           <div className="flex items-start gap-3">
 
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEEAE5]">
               ✨
             </div>
 
@@ -726,7 +726,7 @@ export default function OnboardingPage() {
                   : 'This step is optional'}
               </p>
 
-              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+              <p className="mt-1 text-sm leading-relaxed text-[#816E62]">
                 {currentStep === 1
                   ? 'Only your name, major, and academic year are required. Your profile photo is optional and everything else later can be skipped.'
                   : 'You can add a career goal and bio now, or skip this step and complete them later from your Profile page.'}
@@ -741,7 +741,7 @@ export default function OnboardingPage() {
         {/* ERROR */}
 
         {error && (
-          <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
+          <div className="mb-5 rounded-[18px] border border-red-100 bg-red-50 p-4 text-sm text-red-600">
             {error}
           </div>
         )}
@@ -754,14 +754,14 @@ export default function OnboardingPage() {
           onSubmit={
             handleSubmit
           }
-          className="overflow-hidden rounded-[2rem] border border-gray-200/70 bg-white shadow-sm"
+          className="overflow-hidden rounded-[24px] border border-[#E7E1DA] bg-white shadow-[0_8px_28px_rgba(16,31,51,0.06)]"
         >
 
           {/* FORM HEADER */}
 
-          <div className="border-b border-gray-100 px-6 py-6 sm:px-8">
+          <div className="border-b border-[#EEE8E2] px-6 py-6 sm:px-8">
 
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A2958D]">
               Step 1
             </p>
 
@@ -769,7 +769,7 @@ export default function OnboardingPage() {
               Basic identity & academic info
             </h2>
 
-            <p className="mt-1 text-sm leading-relaxed text-gray-500">
+            <p className="mt-1 text-sm leading-relaxed text-[#816E62]">
               These fields create the foundation
               of your BrewLink profile.
             </p>
@@ -786,16 +786,16 @@ export default function OnboardingPage() {
                 Profile photo
               </label>
 
-              <p className="mt-1 text-xs leading-relaxed text-gray-400">
+              <p className="mt-1 text-xs leading-relaxed text-[#A2958D]">
                 Optional. Add a photo now or skip it
                 and upload one later from your Profile page.
               </p>
 
-              <div className="mt-4 flex flex-col items-center gap-4 rounded-2xl bg-gray-50 p-5 sm:flex-row">
+              <div className="mt-4 flex flex-col items-center gap-4 rounded-[18px] bg-[#F7F3EE] p-5 sm:flex-row">
 
                 <div className="relative">
 
-                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-gray-100 shadow-sm">
+                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#EEEAE5] shadow-sm">
 
                     {photoPreview ? (
 
@@ -817,7 +817,7 @@ export default function OnboardingPage() {
 
                   </div>
 
-                  <label className="absolute bottom-0 right-0 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-black text-white shadow-lg transition hover:scale-105">
+                  <label className="absolute bottom-0 right-0 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#D88955] text-white shadow-lg transition hover:scale-105">
 
                     <span className="text-xs">
                       📷
@@ -838,11 +838,11 @@ export default function OnboardingPage() {
 
                 <div className="text-center sm:text-left">
 
-                  <p className="text-sm font-semibold text-gray-800">
+                  <p className="text-sm font-semibold text-[#1B2B41]">
                     {displayName}
                   </p>
 
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-[#A2958D]">
                     JPG, PNG, or WebP • maximum 5MB
                   </p>
 
@@ -887,7 +887,7 @@ export default function OnboardingPage() {
                   placeholder="First name"
                   maxLength={50}
                   autoComplete="given-name"
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                  className="mt-2 w-full rounded-[14px] border border-[#DED8D1] bg-white px-4 py-3 outline-none transition focus:border-[#1E3457] focus:ring-2 focus:ring-[#1E3457]/10"
                 />
 
               </div>
@@ -917,7 +917,7 @@ export default function OnboardingPage() {
                   placeholder="Last name"
                   maxLength={50}
                   autoComplete="family-name"
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                  className="mt-2 w-full rounded-[14px] border border-[#DED8D1] bg-white px-4 py-3 outline-none transition focus:border-[#1E3457] focus:ring-2 focus:ring-[#1E3457]/10"
                 />
 
               </div>
@@ -948,10 +948,10 @@ export default function OnboardingPage() {
                 }}
                 placeholder="e.g. Economics, Computer Science, Cognitive Science..."
                 maxLength={100}
-                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                className="mt-2 w-full rounded-[14px] border border-[#DED8D1] bg-white px-4 py-3 outline-none transition focus:border-[#1E3457] focus:ring-2 focus:ring-[#1E3457]/10"
               />
 
-              <p className="mt-2 text-xs leading-relaxed text-gray-400">
+              <p className="mt-2 text-xs leading-relaxed text-[#A2958D]">
                 Type your actual major. You are
                 not limited to a preset list.
               </p>
@@ -979,7 +979,7 @@ export default function OnboardingPage() {
                   )
                   setError('')
                 }}
-                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                className="mt-2 w-full rounded-[14px] border border-[#DED8D1] bg-white px-4 py-3 outline-none transition focus:border-[#1E3457] focus:ring-2 focus:ring-[#1E3457]/10"
               >
 
                 <option value="">
@@ -1012,17 +1012,17 @@ export default function OnboardingPage() {
 
             {/* COMPLETION */}
 
-            <div className="rounded-2xl bg-gray-50 p-4">
+            <div className="rounded-[18px] bg-[#F4F1ED] p-4">
 
               <div className="flex items-center justify-between gap-4">
 
                 <div>
 
-                  <p className="text-sm font-semibold text-gray-700">
+                  <p className="text-sm font-semibold text-[#526174]">
                     Required information
                   </p>
 
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-[#A2958D]">
                     Complete all four required fields
                     to continue.
                   </p>
@@ -1032,8 +1032,8 @@ export default function OnboardingPage() {
                 <span
                   className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                     requiredComplete
-                      ? 'bg-black text-white'
-                      : 'bg-white text-gray-500'
+                      ? 'bg-[#1E3457] text-white'
+                      : 'bg-[#FBFAF8] text-[#816E62]'
                   }`}
                 >
                   {
@@ -1061,7 +1061,7 @@ export default function OnboardingPage() {
                 loading ||
                 uploadingPhoto
               }
-              className="w-full rounded-xl bg-black px-5 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-[17px] bg-[#1E3457] px-5 py-4 font-bold text-white shadow-[0_5px_14px_rgba(30,52,87,0.18)] transition hover:-translate-y-0.5 hover:opacity-95 disabled:cursor-not-allowed disabled:bg-[#C9C9C9] disabled:shadow-none"
             >
               {loading ||
               uploadingPhoto
@@ -1069,7 +1069,7 @@ export default function OnboardingPage() {
                 : 'Save & Continue'}
             </button>
 
-            <p className="text-center text-xs leading-relaxed text-gray-400">
+            <p className="text-center text-xs leading-relaxed text-[#A2958D]">
               Your progress is saved to your
               BrewLink profile as you continue.
             </p>
@@ -1084,11 +1084,11 @@ export default function OnboardingPage() {
 
         {currentStep === 2 && (
 
-          <section className="overflow-hidden rounded-[2rem] border border-gray-200/70 bg-white shadow-sm">
+          <section className="overflow-hidden rounded-[24px] border border-[#E7E1DA] bg-white shadow-[0_8px_28px_rgba(16,31,51,0.06)]">
 
-            <div className="border-b border-gray-100 px-6 py-6 sm:px-8">
+            <div className="border-b border-[#EEE8E2] px-6 py-6 sm:px-8">
 
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A2958D]">
                 Step 2
               </p>
 
@@ -1096,7 +1096,7 @@ export default function OnboardingPage() {
                 Career & about
               </h2>
 
-              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+              <p className="mt-1 text-sm leading-relaxed text-[#816E62]">
                 Give BrewLink a little more context about what you&apos;re aiming for and what you&apos;re interested in.
               </p>
 
@@ -1121,10 +1121,10 @@ export default function OnboardingPage() {
                   }}
                   placeholder="e.g. Product Management"
                   maxLength={100}
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                  className="mt-2 w-full rounded-[14px] border border-[#DED8D1] bg-white px-4 py-3 outline-none transition focus:border-[#1E3457] focus:ring-2 focus:ring-[#1E3457]/10"
                 />
 
-                <p className="mt-2 text-xs leading-relaxed text-gray-400">
+                <p className="mt-2 text-xs leading-relaxed text-[#A2958D]">
                   Optional. This should be your main direction, not every career you might be interested in.
                 </p>
 
@@ -1141,14 +1141,14 @@ export default function OnboardingPage() {
                   <span className={`text-xs ${
                     bio.length >= 280
                       ? 'font-semibold text-amber-600'
-                      : 'text-gray-400'
+                      : 'text-[#A2958D]'
                   }`}>
                     {bio.length}/300
                   </span>
 
                 </div>
 
-                <p className="mt-2 text-xs leading-relaxed text-gray-400">
+                <p className="mt-2 text-xs leading-relaxed text-[#A2958D]">
                   Optional. Mention what you&apos;re studying, building, exploring, or the kinds of people you&apos;d like to meet.
                 </p>
 
@@ -1166,25 +1166,25 @@ export default function OnboardingPage() {
                   }}
                   rows={6}
                   placeholder="Tell other students a little about yourself..."
-                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 leading-relaxed outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                  className="mt-2 w-full resize-none rounded-[14px] border border-[#DED8D1] bg-white px-4 py-3 leading-relaxed outline-none transition focus:border-[#1E3457] focus:ring-2 focus:ring-[#1E3457]/10"
                 />
 
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-4">
+              <div className="rounded-[18px] bg-[#F4F1ED] p-4">
 
-                <p className="text-sm font-semibold text-gray-700">
+                <p className="text-sm font-semibold text-[#526174]">
                   Profile preview
                 </p>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-[#816E62]">
                   {careerGoal.trim()
                     ? careerGoal.trim()
                     : 'No career goal added yet'}
                 </p>
 
                 {bio.trim() && (
-                  <p className="mt-3 text-sm leading-relaxed text-gray-600">
+                  <p className="mt-3 text-sm leading-relaxed text-[#6F625A]">
                     {bio.trim()}
                   </p>
                 )}
@@ -1199,7 +1199,7 @@ export default function OnboardingPage() {
                     setCurrentStep(1)
                   }
                   disabled={loading}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-5 py-4 font-semibold text-gray-600 transition hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
+                  className="w-full rounded-[17px] border border-[#DED8D1] bg-white px-5 py-4 font-semibold text-[#1E3457] transition hover:bg-[#F7F3EE] disabled:opacity-50 sm:w-auto"
                 >
                   Back
                 </button>
@@ -1210,7 +1210,7 @@ export default function OnboardingPage() {
                     saveCareerAndContinue
                   }
                   disabled={loading}
-                  className="w-full flex-1 rounded-xl bg-black px-5 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full flex-1 rounded-[17px] bg-[#1E3457] px-5 py-4 font-bold text-white shadow-[0_5px_14px_rgba(30,52,87,0.18)] transition hover:-translate-y-0.5 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading
                     ? 'Saving...'
@@ -1227,7 +1227,7 @@ export default function OnboardingPage() {
                   )
                 }
                 disabled={loading}
-                className="w-full text-center text-sm font-semibold text-gray-400 transition hover:text-black disabled:opacity-50"
+                className="w-full text-center text-sm font-semibold text-[#A2958D] transition hover:text-[#0B1D33] disabled:opacity-50"
               >
                 Skip for now
               </button>
@@ -1240,9 +1240,9 @@ export default function OnboardingPage() {
 
         {/* UPCOMING */}
 
-        <section className="mt-5 rounded-[2rem] border border-gray-200/70 bg-white p-6 shadow-sm">
+        <section className="mt-5 rounded-[24px] border border-[#E7E1DA] bg-white p-6 shadow-[0_8px_28px_rgba(16,31,51,0.05)]">
 
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A2958D]">
             Coming next
           </p>
 
@@ -1259,7 +1259,7 @@ export default function OnboardingPage() {
                     key={
                       step.number
                     }
-                    className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500"
+                    className="rounded-full bg-[#F3E7DF] px-3 py-1.5 text-xs font-bold text-[#C66E3D]"
                   >
                     {step.number}.{' '}
                     {
@@ -1276,6 +1276,7 @@ export default function OnboardingPage() {
 
       </div>
 
+      </div>
     </main>
   )
 }
