@@ -21,7 +21,10 @@ export default function LoginPage() {
 
     const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const {
+      data: loginData,
+      error,
+    } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -32,7 +35,37 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/onboarding')
+    const user = loginData.user
+
+    if (!user) {
+      setError('Could not load your account.')
+      setLoading(false)
+      return
+    }
+
+    const {
+      data: preferences,
+      error: preferencesError,
+    } = await supabase
+      .from('match_preferences')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (preferencesError) {
+      setError(
+        `Could not check your account setup: ${preferencesError.message}`
+      )
+      setLoading(false)
+      return
+    }
+
+    if (preferences) {
+      router.push('/dashboard')
+    } else {
+      router.push('/onboarding')
+    }
+
     router.refresh()
   }
 

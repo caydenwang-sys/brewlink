@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import {
+  useRouter,
+  useSearchParams,
+} from 'next/navigation'
 
 type Match = {
   id: number
@@ -141,6 +144,15 @@ function dateToString(date: Date) {
 
 export default function SchedulePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const requestedMatch =
+    searchParams.get('match')
+
+  const requestedMatchId =
+    requestedMatch
+      ? Number(requestedMatch)
+      : null
 
   const [userId, setUserId] =
     useState<string | null>(null)
@@ -179,6 +191,9 @@ export default function SchedulePage() {
     useState('')
 
   const [success, setSuccess] =
+    useState('')
+
+  const [location, setLocation] =
     useState('')
 
   // ============================================
@@ -713,6 +728,7 @@ export default function SchedulePage() {
   ) {
     setSelectedMatch(match)
 
+    setLocation('')
     setError('')
     setSuccess('')
 
@@ -720,6 +736,40 @@ export default function SchedulePage() {
       match
     )
   }
+
+  // ============================================
+  // AUTO-SELECT MATCH FROM URL
+  // ============================================
+
+  useEffect(() => {
+    if (
+      loading ||
+      !userId ||
+      !requestedMatchId ||
+      Number.isNaN(requestedMatchId) ||
+      selectedMatch
+    ) {
+      return
+    }
+
+    const requestedMatch =
+      matches.find(
+        (match) =>
+          match.id === requestedMatchId
+      )
+
+    if (!requestedMatch) {
+      return
+    }
+
+    selectMatch(requestedMatch)
+  }, [
+    loading,
+    userId,
+    requestedMatchId,
+    matches,
+    selectedMatch,
+  ])
 
   // ============================================
   // SCHEDULE MEETING
@@ -827,7 +877,7 @@ export default function SchedulePage() {
             `${overlap.end_time}:00`,
 
           location:
-            null,
+            location.trim() || null,
 
           status:
             'scheduled',
@@ -1103,7 +1153,21 @@ export default function SchedulePage() {
 
         {success && (
           <div className="mb-6 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm text-green-700">
-            {success}
+
+            <p>
+              {success}
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push('/coffee-chats')
+              }
+              className="mt-3 font-semibold underline transition hover:text-green-900"
+            >
+              View Coffee Chats →
+            </button>
+
           </div>
         )}
 
@@ -1253,6 +1317,31 @@ export default function SchedulePage() {
                 <p className="mt-3 text-sm leading-relaxed text-gray-500">
                   These are the times when your availability overlaps.
                 </p>
+
+                {/* LOCATION */}
+
+                <div className="mt-6">
+
+                  <label className="text-sm font-semibold text-gray-700">
+                    Location
+                  </label>
+
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(event) =>
+                      setLocation(event.target.value)
+                    }
+                    placeholder="e.g. Geisel Library, Price Center, Zoom..."
+                    maxLength={150}
+                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                  />
+
+                  <p className="mt-2 text-xs text-gray-400">
+                    Add where you&apos;d like to meet. You can also enter an online meeting location.
+                  </p>
+
+                </div>
 
                 {/* LOADING */}
 

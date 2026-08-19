@@ -8,10 +8,10 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-type Interest = {
+type Club = {
   id: number
   name: string
-  category: string | null
+  description: string | null
 }
 
 const onboardingSteps = [
@@ -72,20 +72,20 @@ const onboardingSteps = [
   },
 ]
 
-export default function InterestsPage() {
+export default function ClubsPage() {
   const router = useRouter()
 
   const [userId, setUserId] =
     useState('')
 
-  const [allInterests, setAllInterests] =
-    useState<Interest[]>([])
+  const [allClubs, setAllClubs] =
+    useState<Club[]>([])
 
   const [
-    selectedInterests,
-    setSelectedInterests,
+    selectedClubs,
+    setSelectedClubs,
   ] =
-    useState<Interest[]>([])
+    useState<Club[]>([])
 
   const [query, setQuery] =
     useState('')
@@ -94,14 +94,14 @@ export default function InterestsPage() {
     useState(true)
 
   const [
-    actionInterestId,
-    setActionInterestId,
+    actionClubId,
+    setActionClubId,
   ] =
     useState<number | null>(null)
 
   const [
-    creatingInterest,
-    setCreatingInterest,
+    creatingClub,
+    setCreatingClub,
   ] =
     useState(false)
 
@@ -111,7 +111,7 @@ export default function InterestsPage() {
   const [message, setMessage] =
     useState('')
 
-  const currentStep = 4
+  const currentStep = 5
 
   const progress =
     Math.round(
@@ -122,7 +122,7 @@ export default function InterestsPage() {
     )
 
   useEffect(() => {
-    async function loadInterests() {
+    async function loadClubs() {
       const supabase =
         createClient()
 
@@ -148,15 +148,15 @@ export default function InterestsPage() {
       )
 
       const {
-        data: interestData,
-        error: interestError,
+        data: clubData,
+        error: clubError,
       } =
         await supabase
-          .from('interests')
+          .from('clubs')
           .select(`
             id,
             name,
-            category
+            description
           `)
           .order(
             'name',
@@ -165,9 +165,9 @@ export default function InterestsPage() {
             }
           )
 
-      if (interestError) {
+      if (clubError) {
         setError(
-          `Could not load interests: ${interestError.message}`
+          `Could not load clubs: ${clubError.message}`
         )
         setLoading(false)
         return
@@ -179,10 +179,10 @@ export default function InterestsPage() {
       } =
         await supabase
           .from(
-            'user_interests'
+            'user_clubs'
           )
           .select(`
-            interest_id
+            club_id
           `)
           .eq(
             'user_id',
@@ -191,15 +191,15 @@ export default function InterestsPage() {
 
       if (selectedError) {
         setError(
-          `Could not load your interests: ${selectedError.message}`
+          `Could not load your clubs: ${selectedError.message}`
         )
         setLoading(false)
         return
       }
 
-      const loadedInterests =
-        (interestData ||
-          []) as Interest[]
+      const loadedClubs =
+        (clubData ||
+          []) as Club[]
 
       const selectedIds =
         new Set(
@@ -208,19 +208,19 @@ export default function InterestsPage() {
             []
           ).map(
             (row) =>
-              row.interest_id
+              row.club_id
           )
         )
 
-      setAllInterests(
-        loadedInterests
+      setAllClubs(
+        loadedClubs
       )
 
-      setSelectedInterests(
-        loadedInterests.filter(
-          (interest) =>
+      setSelectedClubs(
+        loadedClubs.filter(
+          (club) =>
             selectedIds.has(
-              interest.id
+              club.id
             )
         )
       )
@@ -228,7 +228,7 @@ export default function InterestsPage() {
       setLoading(false)
     }
 
-    loadInterests()
+    loadClubs()
   }, [])
 
   function normalize(
@@ -241,7 +241,7 @@ export default function InterestsPage() {
   }
 
   function matchesQuery(
-    interest: Interest,
+    club: Club,
     value: string
   ) {
     const normalizedQuery =
@@ -249,20 +249,18 @@ export default function InterestsPage() {
         value
       )
 
-    if (
-      !normalizedQuery
-    ) {
+    if (!normalizedQuery) {
       return true
     }
 
     const name =
       normalize(
-        interest.name
+        club.name
       )
 
-    const category =
+    const description =
       normalize(
-        interest.category ||
+        club.description ||
           ''
       )
 
@@ -270,7 +268,7 @@ export default function InterestsPage() {
       name.includes(
         normalizedQuery
       ) ||
-      category.includes(
+      description.includes(
         normalizedQuery
       )
     ) {
@@ -283,7 +281,7 @@ export default function InterestsPage() {
       )
 
     const targetWords =
-      `${name} ${category}`
+      `${name} ${description}`
         .split(' ')
         .filter(Boolean)
 
@@ -304,34 +302,34 @@ export default function InterestsPage() {
     )
   }
 
-  const filteredInterests =
+  const filteredClubs =
     useMemo(() => {
       const selectedIds =
         new Set(
-          selectedInterests.map(
-            (interest) =>
-              interest.id
+          selectedClubs.map(
+            (club) =>
+              club.id
           )
         )
 
-      return allInterests
+      return allClubs
         .filter(
-          (interest) =>
+          (club) =>
             !selectedIds.has(
-              interest.id
+              club.id
             )
         )
         .filter(
-          (interest) =>
+          (club) =>
             matchesQuery(
-              interest,
+              club,
               query
             )
         )
         .slice(0, 14)
     }, [
-      allInterests,
-      selectedInterests,
+      allClubs,
+      selectedClubs,
       query,
     ])
 
@@ -340,40 +338,40 @@ export default function InterestsPage() {
       query
     )
 
-  const exactInterest =
-    allInterests.find(
-      (interest) =>
+  const exactClub =
+    allClubs.find(
+      (club) =>
         normalize(
-          interest.name
+          club.name
         ) ===
         normalizedQuery
     )
 
-  const exactInterestSelected =
-    exactInterest
-      ? selectedInterests.some(
-          (interest) =>
-            interest.id ===
-            exactInterest.id
+  const exactClubSelected =
+    exactClub
+      ? selectedClubs.some(
+          (club) =>
+            club.id ===
+            exactClub.id
         )
       : false
 
-  async function addInterest(
-    interest: Interest
+  async function addClub(
+    club: Club
   ) {
     if (
       !userId ||
-      actionInterestId !==
+      actionClubId !==
         null ||
-      creatingInterest
+      creatingClub
     ) {
       return
     }
 
     setError('')
     setMessage('')
-    setActionInterestId(
-      interest.id
+    setActionClubId(
+      club.id
     )
 
     const supabase =
@@ -384,28 +382,28 @@ export default function InterestsPage() {
     } =
       await supabase
         .from(
-          'user_interests'
+          'user_clubs'
         )
         .insert({
           user_id:
             userId,
-          interest_id:
-            interest.id,
+          club_id:
+            club.id,
         })
 
     if (insertError) {
       setError(
-        `Could not add interest: ${insertError.message}`
+        `Could not add club: ${insertError.message}`
       )
-      setActionInterestId(
+      setActionClubId(
         null
       )
       return
     }
 
-    setSelectedInterests(
+    setSelectedClubs(
       (current) =>
-        [...current, interest]
+        [...current, club]
           .sort(
             (a, b) =>
               a.name.localeCompare(
@@ -416,30 +414,30 @@ export default function InterestsPage() {
 
     setQuery('')
     setMessage(
-      `${interest.name} added.`
+      `${club.name} added.`
     )
 
-    setActionInterestId(
+    setActionClubId(
       null
     )
   }
 
-  async function removeInterest(
-    interest: Interest
+  async function removeClub(
+    club: Club
   ) {
     if (
       !userId ||
-      actionInterestId !==
+      actionClubId !==
         null ||
-      creatingInterest
+      creatingClub
     ) {
       return
     }
 
     setError('')
     setMessage('')
-    setActionInterestId(
-      interest.id
+    setActionClubId(
+      club.id
     )
 
     const supabase =
@@ -450,7 +448,7 @@ export default function InterestsPage() {
     } =
       await supabase
         .from(
-          'user_interests'
+          'user_clubs'
         )
         .delete()
         .eq(
@@ -458,39 +456,39 @@ export default function InterestsPage() {
           userId
         )
         .eq(
-          'interest_id',
-          interest.id
+          'club_id',
+          club.id
         )
 
     if (deleteError) {
       setError(
-        `Could not remove interest: ${deleteError.message}`
+        `Could not remove club: ${deleteError.message}`
       )
-      setActionInterestId(
+      setActionClubId(
         null
       )
       return
     }
 
-    setSelectedInterests(
+    setSelectedClubs(
       (current) =>
         current.filter(
           (item) =>
             item.id !==
-            interest.id
+            club.id
         )
     )
 
     setMessage(
-      `${interest.name} removed.`
+      `${club.name} removed.`
     )
 
-    setActionInterestId(
+    setActionClubId(
       null
     )
   }
 
-  async function createCustomInterest() {
+  async function createCustomClub() {
     const cleanedName =
       query
         .trim()
@@ -499,35 +497,35 @@ export default function InterestsPage() {
     if (
       !cleanedName ||
       !userId ||
-      creatingInterest ||
-      actionInterestId !==
+      creatingClub ||
+      actionClubId !==
         null
     ) {
       return
     }
 
     if (
-      exactInterest &&
-      !exactInterestSelected
+      exactClub &&
+      !exactClubSelected
     ) {
-      await addInterest(
-        exactInterest
+      await addClub(
+        exactClub
       )
       return
     }
 
     if (
-      exactInterestSelected
+      exactClubSelected
     ) {
       setMessage(
-        `${exactInterest?.name} is already selected.`
+        `${exactClub?.name} is already selected.`
       )
       return
     }
 
     setError('')
     setMessage('')
-    setCreatingInterest(
+    setCreatingClub(
       true
     )
 
@@ -535,23 +533,21 @@ export default function InterestsPage() {
       createClient()
 
     const {
-      data: createdInterest,
+      data: createdClub,
       error: createError,
     } =
       await supabase
-        .from(
-          'interests'
-        )
+        .from('clubs')
         .insert({
           name:
             cleanedName,
-          category:
-            'Other',
+          description:
+            null,
         })
         .select(`
           id,
           name,
-          category
+          description
         `)
         .single()
 
@@ -561,13 +557,11 @@ export default function InterestsPage() {
         error: refreshError,
       } =
         await supabase
-          .from(
-            'interests'
-          )
+          .from('clubs')
           .select(`
             id,
             name,
-            category
+            description
           `)
           .order(
             'name',
@@ -578,50 +572,48 @@ export default function InterestsPage() {
 
       if (refreshError) {
         setError(
-          `Could not create interest: ${createError.message}`
+          `Could not create club: ${createError.message}`
         )
-        setCreatingInterest(
+        setCreatingClub(
           false
         )
         return
       }
 
-      const refreshedInterests =
+      const refreshedClubs =
         (refreshed ||
-          []) as Interest[]
+          []) as Club[]
 
-      setAllInterests(
-        refreshedInterests
+      setAllClubs(
+        refreshedClubs
       )
 
-      const matchingInterest =
-        refreshedInterests.find(
-          (interest) =>
+      const matchingClub =
+        refreshedClubs.find(
+          (club) =>
             normalize(
-              interest.name
+              club.name
             ) ===
             normalize(
               cleanedName
             )
         )
 
-      if (
-        !matchingInterest
-      ) {
+      if (!matchingClub) {
         setError(
-          `Could not create interest: ${createError.message}`
+          `Could not create club: ${createError.message}`
         )
-        setCreatingInterest(
+        setCreatingClub(
           false
         )
         return
       }
 
       const alreadySelected =
-        selectedInterests.some(
-          (interest) =>
-            interest.id ===
-            matchingInterest.id
+        selectedClubs.some(
+          (club) =>
+            club.id ===
+            matchingClub.id
         )
 
       if (
@@ -632,30 +624,30 @@ export default function InterestsPage() {
         } =
           await supabase
             .from(
-              'user_interests'
+              'user_clubs'
             )
             .insert({
               user_id:
                 userId,
-              interest_id:
-                matchingInterest.id,
+              club_id:
+                matchingClub.id,
             })
 
         if (linkError) {
           setError(
-            `Interest exists, but could not be added to your profile: ${linkError.message}`
+            `Club exists, but could not be added to your profile: ${linkError.message}`
           )
-          setCreatingInterest(
+          setCreatingClub(
             false
           )
           return
         }
 
-        setSelectedInterests(
+        setSelectedClubs(
           (current) =>
             [
               ...current,
-              matchingInterest,
+              matchingClub,
             ].sort(
               (a, b) =>
                 a.name.localeCompare(
@@ -667,20 +659,18 @@ export default function InterestsPage() {
 
       setQuery('')
       setMessage(
-        `${matchingInterest.name} added.`
+        `${matchingClub.name} added.`
       )
-      setCreatingInterest(
-        false
-      )
+      setCreatingClub(false)
       return
     }
 
-    const newInterest =
-      createdInterest as Interest
+    const newClub =
+      createdClub as Club
 
-    setAllInterests(
+    setAllClubs(
       (current) =>
-        [...current, newInterest]
+        [...current, newClub]
           .sort(
             (a, b) =>
               a.name.localeCompare(
@@ -694,28 +684,26 @@ export default function InterestsPage() {
     } =
       await supabase
         .from(
-          'user_interests'
+          'user_clubs'
         )
         .insert({
           user_id:
             userId,
-          interest_id:
-            newInterest.id,
+          club_id:
+            newClub.id,
         })
 
     if (linkError) {
       setError(
-        `Interest was created, but could not be added to your profile: ${linkError.message}`
+        `Club was created, but could not be added to your profile: ${linkError.message}`
       )
-      setCreatingInterest(
-        false
-      )
+      setCreatingClub(false)
       return
     }
 
-    setSelectedInterests(
+    setSelectedClubs(
       (current) =>
-        [...current, newInterest]
+        [...current, newClub]
           .sort(
             (a, b) =>
               a.name.localeCompare(
@@ -726,17 +714,15 @@ export default function InterestsPage() {
 
     setQuery('')
     setMessage(
-      `${newInterest.name} created and added.`
+      `${newClub.name} created and added.`
     )
 
-    setCreatingInterest(
-      false
-    )
+    setCreatingClub(false)
   }
 
   function goNext() {
     router.push(
-      '/onboarding/clubs'
+      '/onboarding/work'
     )
   }
 
@@ -747,11 +733,11 @@ export default function InterestsPage() {
         <div className="text-center">
 
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm">
-            ✨
+            👥
           </div>
 
           <p className="mt-4 text-sm font-medium text-gray-500">
-            Loading interests...
+            Loading clubs...
           </p>
 
         </div>
@@ -773,7 +759,7 @@ export default function InterestsPage() {
             type="button"
             onClick={() =>
               router.push(
-                '/onboarding'
+                '/onboarding/interests'
               )
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
@@ -871,17 +857,17 @@ export default function InterestsPage() {
         <section className="mb-8">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Personalize your profile
+            Your communities
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-            What are you interested in?
+            Clubs & Organizations
           </h1>
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
-            Choose none, one, or as many as you want.
-            BrewLink uses these to improve Search,
-            Discovery, and compatibility ranking.
+            Add none, one, or as many groups as you want.
+            These can help other students discover shared
+            communities and experiences.
           </p>
 
         </section>
@@ -907,14 +893,14 @@ export default function InterestsPage() {
               <div>
 
                 <p className="text-sm font-semibold text-gray-900">
-                  Your interests
+                  Your clubs
                 </p>
 
                 <p className="mt-1 text-xs text-gray-400">
-                  {selectedInterests.length}{' '}
-                  {selectedInterests.length === 1
-                    ? 'interest'
-                    : 'interests'} selected
+                  {selectedClubs.length}{' '}
+                  {selectedClubs.length === 1
+                    ? 'club'
+                    : 'clubs'} selected
                   • no limit
                 </p>
 
@@ -926,18 +912,17 @@ export default function InterestsPage() {
 
             </div>
 
-            {selectedInterests.length ===
-            0 ? (
+            {selectedClubs.length === 0 ? (
 
               <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5">
 
                 <p className="text-sm font-semibold text-gray-700">
-                  No interests selected yet
+                  No clubs selected yet
                 </p>
 
                 <p className="mt-1 text-sm leading-relaxed text-gray-500">
-                  That&apos;s okay. You can add some below
-                  or skip this step entirely.
+                  That&apos;s completely fine. Search below,
+                  create a missing organization, or skip this step.
                 </p>
 
               </div>
@@ -946,29 +931,29 @@ export default function InterestsPage() {
 
               <div className="mt-4 flex flex-wrap gap-2">
 
-                {selectedInterests.map(
-                  (interest) => (
+                {selectedClubs.map(
+                  (club) => (
 
                   <button
                     key={
-                      interest.id
+                      club.id
                     }
                     type="button"
                     onClick={() =>
-                      removeInterest(
-                        interest
+                      removeClub(
+                        club
                       )
                     }
                     disabled={
-                      actionInterestId !==
+                      actionClubId !==
                         null ||
-                      creatingInterest
+                      creatingClub
                     }
                     className="group flex max-w-full items-center gap-2 rounded-full bg-black px-3 py-2 text-left text-xs font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
 
                     <span className="break-words">
-                      {interest.name}
+                      {club.name}
                     </span>
 
                     <span className="text-gray-300 transition group-hover:text-white">
@@ -990,12 +975,12 @@ export default function InterestsPage() {
           <div className="mt-7 border-t border-gray-100 pt-6">
 
             <label className="text-sm font-semibold">
-              Find or add an interest
+              Find or add a club
             </label>
 
             <p className="mt-1 text-xs leading-relaxed text-gray-400">
-              Search existing interests by name or category.
-              If your interest is missing, create it.
+              Search existing organizations by name or description.
+              If yours is missing, create it.
             </p>
 
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 transition focus-within:border-gray-400 focus-within:ring-2 focus-within:ring-gray-100">
@@ -1022,25 +1007,25 @@ export default function InterestsPage() {
                     event.preventDefault()
 
                     if (
-                      exactInterest &&
-                      !exactInterestSelected
+                      exactClub &&
+                      !exactClubSelected
                     ) {
-                      addInterest(
-                        exactInterest
+                      addClub(
+                        exactClub
                       )
                       return
                     }
 
                     if (
                       normalizedQuery &&
-                      !exactInterest
+                      !exactClub
                     ) {
-                      createCustomInterest()
+                      createCustomClub()
                     }
                   }
                 }}
-                placeholder="Try AI, finance, startups, research..."
-                maxLength={80}
+                placeholder="Try AI Club, consulting, tennis..."
+                maxLength={100}
                 className="min-w-0 flex-1 bg-transparent text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400"
               />
 
@@ -1051,7 +1036,7 @@ export default function InterestsPage() {
                     setQuery('')
                   }
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-black"
-                  aria-label="Clear interest search"
+                  aria-label="Clear club search"
                 >
                   ×
                 </button>
@@ -1073,8 +1058,7 @@ export default function InterestsPage() {
 
                 <>
 
-                  {filteredInterests.length >
-                    0 && (
+                  {filteredClubs.length > 0 && (
 
                     <div>
 
@@ -1084,23 +1068,23 @@ export default function InterestsPage() {
 
                       <div className="mt-3 space-y-2">
 
-                        {filteredInterests.map(
-                          (interest) => (
+                        {filteredClubs.map(
+                          (club) => (
 
                           <button
                             key={
-                              interest.id
+                              club.id
                             }
                             type="button"
                             onClick={() =>
-                              addInterest(
-                                interest
+                              addClub(
+                                club
                               )
                             }
                             disabled={
-                              actionInterestId !==
+                              actionClubId !==
                                 null ||
-                              creatingInterest
+                              creatingClub
                             }
                             className="flex w-full items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left transition hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -1108,13 +1092,13 @@ export default function InterestsPage() {
                             <div className="min-w-0">
 
                               <p className="break-words text-sm font-semibold text-gray-900">
-                                {interest.name}
+                                {club.name}
                               </p>
 
-                              {interest.category && (
-                                <p className="mt-1 text-xs text-gray-400">
+                              {club.description && (
+                                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-400">
                                   {
-                                    interest.category
+                                    club.description
                                   }
                                 </p>
                               )}
@@ -1122,8 +1106,8 @@ export default function InterestsPage() {
                             </div>
 
                             <span className="shrink-0 rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white">
-                              {actionInterestId ===
-                              interest.id
+                              {actionClubId ===
+                              club.id
                                 ? 'Adding...'
                                 : '+ Add'}
                             </span>
@@ -1138,13 +1122,13 @@ export default function InterestsPage() {
 
                   )}
 
-                  {!exactInterest &&
+                  {!exactClub &&
                     normalizedQuery && (
 
                     <div className="mt-4 rounded-2xl bg-gray-50 p-4">
 
                       <p className="text-sm font-semibold text-gray-800">
-                        Don&apos;t see your interest?
+                        Don&apos;t see your organization?
                       </p>
 
                       <p className="mt-1 break-words text-sm text-gray-500">
@@ -1155,16 +1139,16 @@ export default function InterestsPage() {
                       <button
                         type="button"
                         onClick={
-                          createCustomInterest
+                          createCustomClub
                         }
                         disabled={
-                          creatingInterest ||
-                          actionInterestId !==
+                          creatingClub ||
+                          actionClubId !==
                             null
                         }
                         className="mt-3 rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {creatingInterest
+                        {creatingClub
                           ? 'Creating...'
                           : `+ Create "${query.trim()}"`}
                       </button>
@@ -1173,10 +1157,12 @@ export default function InterestsPage() {
 
                   )}
 
-                  {exactInterestSelected && (
+                  {exactClubSelected && (
+
                     <div className="mt-4 rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">
-                      {exactInterest?.name} is already selected.
+                      {exactClub?.name} is already selected.
                     </div>
+
                   )}
 
                 </>
@@ -1186,34 +1172,34 @@ export default function InterestsPage() {
                 <div>
 
                   <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
-                    Browse interests
+                    Browse clubs
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
 
-                    {filteredInterests
+                    {filteredClubs
                       .slice(0, 12)
                       .map(
-                        (interest) => (
+                        (club) => (
 
                         <button
                           key={
-                            interest.id
+                            club.id
                           }
                           type="button"
                           onClick={() =>
-                            addInterest(
-                              interest
+                            addClub(
+                              club
                             )
                           }
                           disabled={
-                            actionInterestId !==
+                            actionClubId !==
                               null ||
-                            creatingInterest
+                            creatingClub
                           }
                           className="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 transition hover:border-gray-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          + {interest.name}
+                          + {club.name}
                         </button>
 
                       )
@@ -1239,7 +1225,7 @@ export default function InterestsPage() {
                 type="button"
                 onClick={() =>
                   router.push(
-                    '/onboarding'
+                    '/onboarding/interests'
                   )
                 }
                 className="w-full rounded-xl border border-gray-200 bg-white px-5 py-4 font-semibold text-gray-600 transition hover:bg-gray-50 sm:w-auto"
@@ -1282,12 +1268,12 @@ export default function InterestsPage() {
           </p>
 
           <p className="mt-2 text-sm font-semibold text-gray-700">
-            Clubs & Organizations
+            Work Experience
           </p>
 
           <p className="mt-1 text-sm leading-relaxed text-gray-500">
-            Add the groups, organizations, teams, and
-            communities you&apos;re part of.
+            Add internships, jobs, research roles, or other
+            experience — or skip if you do not have any yet.
           </p>
 
         </section>

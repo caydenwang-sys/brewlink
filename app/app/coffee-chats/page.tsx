@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import {
+  useRouter,
+  useSearchParams,
+} from 'next/navigation'
 
 type Profile = {
   id: string
@@ -10,28 +13,55 @@ type Profile = {
   last_name: string | null
 }
 
+type Match = {
+  id: number
+  user_1_id: string
+  user_2_id: string
+  status: string | null
+}
+
 type CoffeeChat = {
-  id: string
+  id: number
   match_id: number
-  organizer_id: string
-  participant_id: string
   scheduled_date: string
   start_time: string
-  end_time: string
-  location: string
+  end_time: string | null
+  location: string | null
   status: string
   otherUser: Profile | null
 }
 
+type ViewMode =
+  | 'list'
+  | 'calendar'
+
 export default function CoffeeChatsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const requestedView =
+    searchParams.get('view')
 
   const [coffeeChats, setCoffeeChats] = useState<CoffeeChat[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  const [viewMode, setViewMode] =
+    useState<ViewMode>(
+      requestedView === 'calendar'
+        ? 'calendar'
+        : 'list'
+    )
+
+  const [calendarDate, setCalendarDate] =
+    useState(() => new Date())
+
   const [cancellingId, setCancellingId] =
-    useState<string | null>(null)
+    useState<number | null>(null)
+
+  const [selectedChat, setSelectedChat] =
+    useState<CoffeeChat | null>(null)
 
   // ============================================
   // LOAD COFFEE CHATS
@@ -53,36 +83,29 @@ export default function CoffeeChatsPage() {
       return
     }
 
+    // ============================================
+    // LOAD USER'S MATCHES
+    // ============================================
+
     const {
-      data: chats,
-      error: chatsError,
+      data: matches,
+      error: matchesError,
     } = await supabase
-      .from('coffee_chats')
+      .from('matches')
       .select(`
         id,
-        match_id,
-        organizer_id,
-        participant_id,
-        scheduled_date,
-        start_time,
-        end_time,
-        location,
+        user_1_id,
+        user_2_id,
         status
       `)
       .or(
-        `organizer_id.eq.${user.id},participant_id.eq.${user.id}`
+        `user_1_id.eq.${user.id},user_2_id.eq.${user.id}`
       )
-      .order('scheduled_date', {
-        ascending: true,
-      })
-      .order('start_time', {
-        ascending: true,
-      })
 
-    if (chatsError) {
+    if (matchesError) {
       console.error(
-        'Could not load coffee chats:',
-        chatsError
+        'Could not load matches:',
+        matchesError
       )
 
       setError(
@@ -93,7 +116,61 @@ export default function CoffeeChatsPage() {
       return
     }
 
-    if (!chats || chats.length === 0) {
+    const userMatches =
+      (matches || []) as Match[]
+
+    if (userMatches.length === 0) {
+      setCoffeeChats([])
+      setLoading(false)
+      return
+    }
+
+    const matchIds =
+      userMatches.map(
+        (match) => match.id
+      )
+
+    // ============================================
+    // LOAD MEETINGS
+    // ============================================
+
+    const {
+      data: meetings,
+      error: meetingsError,
+    } = await supabase
+      .from('meetings')
+      .select(`
+        id,
+        match_id,
+        scheduled_date,
+        start_time,
+        end_time,
+        location,
+        status
+      `)
+      .in('match_id', matchIds)
+      .order('scheduled_date', {
+        ascending: true,
+      })
+      .order('start_time', {
+        ascending: true,
+      })
+
+    if (meetingsError) {
+      console.error(
+        'Could not load meetings:',
+        meetingsError
+      )
+
+      setError(
+        'Could not load your coffee chats.'
+      )
+
+      setLoading(false)
+      return
+    }
+
+    if (!meetings || meetings.length === 0) {
       setCoffeeChats([])
       setLoading(false)
       return
@@ -103,11 +180,12 @@ export default function CoffeeChatsPage() {
     // FIND OTHER USERS
     // ============================================
 
-    const otherUserIds = chats.map((chat) =>
-      chat.organizer_id === user.id
-        ? chat.participant_id
-        : chat.organizer_id
-    )
+    const otherUserIds =
+      userMatches.map((match) =>
+        match.user_1_id === user.id
+          ? match.user_2_id
+          : match.user_1_id
+      )
 
     const uniqueOtherUserIds = [
       ...new Set(otherUserIds),
@@ -123,7 +201,10 @@ export default function CoffeeChatsPage() {
         first_name,
         last_name
       `)
-      .in('id', uniqueOtherUserIds)
+      .in(
+        'id',
+        uniqueOtherUserIds
+      )
 
     if (profilesError) {
       console.error(
@@ -140,26 +221,55 @@ export default function CoffeeChatsPage() {
     }
 
     // ============================================
-    // COMBINE CHAT + PROFILE
+    // COMBINE MEETING + MATCH + PROFILE
     // ============================================
 
     const formattedChats: CoffeeChat[] =
-      chats.map((chat) => {
-        const otherUserId =
-          chat.organizer_id === user.id
-            ? chat.participant_id
-            : chat.organizer_id
+      meetings
+        .filter(
+          (meeting) =>
+            meeting.match_id !== null &&
+            meeting.scheduled_date !== null &&
+            meeting.start_time !== null
+        )
+        .map((meeting) => {
+          const match =
+            userMatches.find(
+              (item) =>
+                item.id === meeting.match_id
+            )
 
-        const profile =
-          profiles?.find(
-            (p) => p.id === otherUserId
-          ) || null
+          let otherUser: Profile | null = null
 
-        return {
-          ...chat,
-          otherUser: profile,
-        }
-      })
+          if (match) {
+            const otherUserId =
+              match.user_1_id === user.id
+                ? match.user_2_id
+                : match.user_1_id
+
+            otherUser =
+              profiles?.find(
+                (profile) =>
+                  profile.id === otherUserId
+              ) || null
+          }
+
+          return {
+            id: meeting.id,
+            match_id: meeting.match_id as number,
+            scheduled_date:
+              meeting.scheduled_date as string,
+            start_time:
+              meeting.start_time as string,
+            end_time:
+              meeting.end_time,
+            location:
+              meeting.location,
+            status:
+              meeting.status || 'scheduled',
+            otherUser,
+          }
+        })
 
     setCoffeeChats(formattedChats)
     setLoading(false)
@@ -245,6 +355,152 @@ export default function CoffeeChatsPage() {
     return dateTime >= new Date()
   }
 
+  function getChatName(
+    chat: CoffeeChat
+  ) {
+    const firstName =
+      chat.otherUser?.first_name || ''
+
+    const lastName =
+      chat.otherUser?.last_name || ''
+
+    return (
+      `${firstName} ${lastName}`.trim() ||
+      'Coffee chat'
+    )
+  }
+
+  // ============================================
+  // CALENDAR HELPERS
+  // ============================================
+
+  function dateToString(date: Date) {
+    return (
+      `${date.getFullYear()}-` +
+      `${String(
+        date.getMonth() + 1
+      ).padStart(2, '0')}-` +
+      `${String(
+        date.getDate()
+      ).padStart(2, '0')}`
+    )
+  }
+
+  function isToday(date: Date) {
+    const today = new Date()
+
+    return (
+      date.getFullYear() ===
+        today.getFullYear() &&
+      date.getMonth() ===
+        today.getMonth() &&
+      date.getDate() ===
+        today.getDate()
+    )
+  }
+
+  function getCalendarDays() {
+    const year =
+      calendarDate.getFullYear()
+
+    const month =
+      calendarDate.getMonth()
+
+    const firstDay =
+      new Date(
+        year,
+        month,
+        1
+      )
+
+    const lastDay =
+      new Date(
+        year,
+        month + 1,
+        0
+      )
+
+    const firstWeekday =
+      firstDay.getDay()
+
+    const totalDays =
+      lastDay.getDate()
+
+    const calendarDays:
+      (Date | null)[] = []
+
+    for (
+      let i = 0;
+      i < firstWeekday;
+      i++
+    ) {
+      calendarDays.push(null)
+    }
+
+    for (
+      let day = 1;
+      day <= totalDays;
+      day++
+    ) {
+      calendarDays.push(
+        new Date(
+          year,
+          month,
+          day
+        )
+      )
+    }
+
+    while (
+      calendarDays.length % 7 !== 0
+    ) {
+      calendarDays.push(null)
+    }
+
+    return calendarDays
+  }
+
+  function previousMonth() {
+    setCalendarDate(
+      (current) =>
+        new Date(
+          current.getFullYear(),
+          current.getMonth() - 1,
+          1
+        )
+    )
+  }
+
+  function nextMonth() {
+    setCalendarDate(
+      (current) =>
+        new Date(
+          current.getFullYear(),
+          current.getMonth() + 1,
+          1
+        )
+    )
+  }
+
+  function goToToday() {
+    setCalendarDate(
+      new Date()
+    )
+  }
+
+  function getChatsForDate(
+    date: Date
+  ) {
+    const dateString =
+      dateToString(date)
+
+    return upcomingChats.filter(
+      (chat) =>
+        chat.scheduled_date ===
+        dateString
+    )
+  }
+
   // ============================================
   // CANCEL COFFEE CHAT
   // ============================================
@@ -252,7 +508,7 @@ export default function CoffeeChatsPage() {
   async function cancelCoffeeChat(
     chat: CoffeeChat
   ) {
-    if (cancellingId) {
+    if (cancellingId !== null) {
       return
     }
 
@@ -277,10 +533,6 @@ export default function CoffeeChatsPage() {
     setError('')
     setSuccess('')
 
-    // ============================================
-    // GET CURRENT USER
-    // ============================================
-
     const {
       data: { user },
       error: userError,
@@ -293,14 +545,30 @@ export default function CoffeeChatsPage() {
     }
 
     // ============================================
-    // VERIFY USER IS PART OF THE CHAT
+    // VERIFY USER BELONGS TO MATCH
     // ============================================
 
-    const isInvolved =
-      chat.organizer_id === user.id ||
-      chat.participant_id === user.id
+    const {
+      data: match,
+      error: matchError,
+    } = await supabase
+      .from('matches')
+      .select(`
+        id,
+        user_1_id,
+        user_2_id
+      `)
+      .eq('id', chat.match_id)
+      .single()
 
-    if (!isInvolved) {
+    if (
+      matchError ||
+      !match ||
+      (
+        match.user_1_id !== user.id &&
+        match.user_2_id !== user.id
+      )
+    ) {
       setError(
         'You do not have permission to cancel this coffee chat.'
       )
@@ -310,17 +578,18 @@ export default function CoffeeChatsPage() {
     }
 
     // ============================================
-    // UPDATE STATUS
+    // UPDATE MEETING STATUS
     // ============================================
 
     const {
       error: cancelError,
     } = await supabase
-      .from('coffee_chats')
+      .from('meetings')
       .update({
         status: 'cancelled',
       })
       .eq('id', chat.id)
+      .eq('match_id', chat.match_id)
 
     if (cancelError) {
       console.error(
@@ -337,66 +606,18 @@ export default function CoffeeChatsPage() {
     }
 
     // ============================================
-    // FIND OTHER USER
-    // ============================================
-
-    const otherUserId =
-      chat.organizer_id === user.id
-        ? chat.participant_id
-        : chat.organizer_id
-
-    // ============================================
-    // CREATE NOTIFICATION
-    // ============================================
-
-    const currentUserName =
-      `${user.user_metadata?.first_name || ''} ${
-        user.user_metadata?.last_name || ''
-      }`.trim()
-
-    const displayName =
-      currentUserName ||
-      'Your connection'
-
-    const {
-      error: notificationError,
-    } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: otherUserId,
-        type: 'coffee_chat_cancelled',
-        title: 'Coffee chat cancelled',
-        message:
-          `${displayName} cancelled your coffee chat scheduled for ${formatDate(
-            chat.scheduled_date
-          )} at ${formatTime(
-            chat.start_time
-          )}.`,
-        related_user_id: user.id,
-        related_match_id: chat.match_id,
-        related_message_id: null,
-        is_read: false,
-      })
-
-    if (notificationError) {
-      console.error(
-        'Coffee chat was cancelled, but notification could not be created:',
-        notificationError
-      )
-    }
-
-    // ============================================
     // UPDATE LOCAL STATE
     // ============================================
 
     setCoffeeChats((currentChats) =>
-      currentChats.map((currentChat) =>
-        currentChat.id === chat.id
-          ? {
-              ...currentChat,
-              status: 'cancelled',
-            }
-          : currentChat
+      currentChats.map(
+        (currentChat) =>
+          currentChat.id === chat.id
+            ? {
+                ...currentChat,
+                status: 'cancelled',
+              }
+            : currentChat
       )
     )
 
@@ -433,17 +654,43 @@ export default function CoffeeChatsPage() {
   // SPLIT UPCOMING / PAST
   // ============================================
 
-  const upcomingChats = coffeeChats.filter(
-    (chat) =>
-      chat.status !== 'cancelled' &&
-      isUpcoming(chat)
-  )
+  const upcomingChats =
+    coffeeChats.filter(
+      (chat) =>
+        chat.status !== 'cancelled' &&
+        chat.status !== 'completed' &&
+        isUpcoming(chat)
+    )
 
-  const pastChats = coffeeChats.filter(
-    (chat) =>
-      chat.status === 'cancelled' ||
-      !isUpcoming(chat)
-  )
+  const pastChats =
+    coffeeChats.filter(
+      (chat) =>
+        chat.status === 'cancelled' ||
+        chat.status === 'completed' ||
+        !isUpcoming(chat)
+    )
+
+  const calendarDays =
+    getCalendarDays()
+
+  const calendarMonth =
+    calendarDate.toLocaleDateString(
+      [],
+      {
+        month: 'long',
+        year: 'numeric',
+      }
+    )
+
+  const weekdays = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+  ]
 
   // ============================================
   // PAGE
@@ -484,26 +731,66 @@ export default function CoffeeChatsPage() {
 
       {/* MAIN */}
 
-      <div className="mx-auto max-w-4xl px-5 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-6 sm:py-12">
 
         {/* TITLE */}
 
-        <section className="mb-10">
+        <section className="mb-8">
 
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            BrewLink
-          </p>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
-          {/* TEMPORARY ROUTE TEST */}
+            <div>
 
-          <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-            TEST 123
-          </h1>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
+                BrewLink
+              </p>
 
-          <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-500">
-            Keep track of your upcoming meetings
-            and past coffee chats.
-          </p>
+              <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
+                Coffee Chats
+              </h1>
+
+              <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-500">
+                Keep track of your upcoming meetings
+                and past coffee chats.
+              </p>
+
+            </div>
+
+            {/* VIEW TOGGLE */}
+
+            <div className="flex w-fit rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+
+              <button
+                type="button"
+                onClick={() =>
+                  setViewMode('list')
+                }
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  viewMode === 'list'
+                    ? 'bg-black text-white'
+                    : 'text-gray-500 hover:text-black'
+                }`}
+              >
+                ☰ List
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setViewMode('calendar')
+                }
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  viewMode === 'calendar'
+                    ? 'bg-black text-white'
+                    : 'text-gray-500 hover:text-black'
+                }`}
+              >
+                📅 Calendar
+              </button>
+
+            </div>
+
+          </div>
 
         </section>
 
@@ -524,288 +811,243 @@ export default function CoffeeChatsPage() {
         )}
 
         {/* ============================================
-            UPCOMING
+            CALENDAR VIEW
         ============================================ */}
 
-        <section>
+        {viewMode === 'calendar' && (
 
-          <div className="mb-4 flex items-center justify-between">
+          <section>
 
-            <div>
+            {/* CALENDAR HEADER */}
 
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Upcoming
-              </p>
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 
-              <h2 className="mt-1 text-2xl font-bold">
-                Your next chats
-              </h2>
+              <div>
 
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                router.push('/schedule')
-              }
-              className="rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
-            >
-              + Schedule
-            </button>
-
-          </div>
-
-          {upcomingChats.length === 0 ? (
-
-            <div className="rounded-3xl border border-gray-200/70 bg-white p-8 shadow-sm">
-
-              <div className="text-center">
-
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
-                  ☕
-                </div>
-
-                <h3 className="mt-4 text-lg font-semibold">
-                  No upcoming coffee chats
-                </h3>
-
-                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
-                  Connect with someone and schedule
-                  a coffee chat to start building
-                  your network.
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                  Calendar
                 </p>
+
+                <h2 className="mt-1 text-3xl font-bold tracking-tight">
+                  {calendarMonth}
+                </h2>
+
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+
+                <button
+                  type="button"
+                  onClick={goToToday}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+                >
+                  Today
+                </button>
+
+                <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+                  <button
+                    type="button"
+                    onClick={previousMonth}
+                    className="flex h-10 w-10 items-center justify-center border-r border-gray-200 text-gray-600 transition hover:bg-gray-50 hover:text-black"
+                    aria-label="Previous month"
+                  >
+                    ←
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={nextMonth}
+                    className="flex h-10 w-10 items-center justify-center text-gray-600 transition hover:bg-gray-50 hover:text-black"
+                    aria-label="Next month"
+                  >
+                    →
+                  </button>
+
+                </div>
 
                 <button
                   type="button"
                   onClick={() =>
-                    router.push('/discover')
+                    router.push('/schedule')
                   }
-                  className="mt-5 rounded-xl bg-black px-5 py-3 text-sm font-bold text-white transition hover:bg-gray-800"
+                  className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
                 >
-                  Discover students →
+                  + Schedule
                 </button>
 
               </div>
 
             </div>
 
-          ) : (
+            {/* CALENDAR */}
 
-            <div className="space-y-4">
+            <div className="overflow-x-auto rounded-[1.75rem] border border-gray-200/80 bg-white shadow-sm">
 
-              {upcomingChats.map((chat) => (
+              <div className="min-w-[760px]">
 
-                <div
-                  key={chat.id}
-                  className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
+                {/* WEEK DAYS */}
 
-                  {/* TOP */}
+                <div className="grid grid-cols-7 border-b border-gray-200 bg-[#fafaf9]">
 
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-                    {/* PERSON */}
-
-                    <div className="flex items-center gap-4">
-
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100 text-lg font-bold text-gray-700">
-                        {(
-                          chat.otherUser
-                            ?.first_name || '?'
-                        )
-                          .charAt(0)
-                          .toUpperCase()}
+                  {weekdays.map(
+                    (weekday) => (
+                      <div
+                        key={weekday}
+                        className="border-r border-gray-100 px-3 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400 last:border-r-0"
+                      >
+                        {weekday}
                       </div>
-
-                      <div>
-
-                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
-                          Coffee chat with
-                        </p>
-
-                        <h3 className="mt-1 text-xl font-bold">
-                          {chat.otherUser
-                            ?.first_name ||
-                            'Unknown'}{' '}
-                          {chat.otherUser
-                            ?.last_name ||
-                            ''}
-                        </h3>
-
-                      </div>
-
-                    </div>
-
-                    {/* STATUS */}
-
-                    <div
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                        chat.status === 'confirmed'
-                          ? 'bg-green-50 text-green-700'
-                          : 'bg-blue-50 text-blue-700'
-                      }`}
-                    >
-                      {chat.status === 'confirmed'
-                        ? 'Confirmed'
-                        : 'Scheduled'}
-                    </div>
-
-                  </div>
-
-                  {/* DETAILS */}
-
-                  <div className="mt-6 grid gap-4 border-t border-gray-100 pt-5 sm:grid-cols-3">
-
-                    <div>
-
-                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
-                        Date
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium">
-                        {formatDate(
-                          chat.scheduled_date
-                        )}
-                      </p>
-
-                    </div>
-
-                    <div>
-
-                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
-                        Time
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium">
-                        {formatTime(
-                          chat.start_time
-                        )}
-                        {' – '}
-                        {formatTime(
-                          chat.end_time
-                        )}
-                      </p>
-
-                    </div>
-
-                    <div>
-
-                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
-                        Location
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium">
-                        {chat.location}
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  {/* CANCEL */}
-
-                  <div className="mt-5 border-t border-gray-100 pt-5">
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        cancelCoffeeChat(chat)
-                      }
-                      disabled={
-                        cancellingId === chat.id
-                      }
-                      className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                    >
-                      {cancellingId === chat.id
-                        ? 'Cancelling...'
-                        : 'Cancel coffee chat'}
-                    </button>
-
-                  </div>
+                    )
+                  )}
 
                 </div>
 
-              ))}
+                {/* DAYS */}
+
+                <div className="grid grid-cols-7">
+
+                  {calendarDays.map(
+                    (
+                      date,
+                      index
+                    ) => {
+
+                      if (!date) {
+                        return (
+                          <div
+                            key={`empty-${index}`}
+                            className="min-h-32 border-b border-r border-gray-100 bg-[#fafaf9]/70 p-2"
+                          />
+                        )
+                      }
+
+                      const chatsForDate =
+                        getChatsForDate(date)
+
+                      const today =
+                        isToday(date)
+
+                      return (
+                        <div
+                          key={
+                            date.toISOString()
+                          }
+                          className={`min-h-32 border-b border-r border-gray-100 p-2.5 transition-colors ${
+                            today
+                              ? 'bg-gray-50/80 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]'
+                              : 'bg-white hover:bg-gray-50/50'
+                          }`}
+                        >
+
+                          {/* DAY NUMBER */}
+
+                          <div className="flex items-center justify-between">
+
+                            <div
+                              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${
+                                today
+                                  ? 'bg-black text-white shadow-sm'
+                                  : 'text-gray-600'
+                              }`}
+                            >
+                              {date.getDate()}
+                            </div>
+
+                            {today && (
+                              <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                                Today
+                              </span>
+                            )}
+
+                          </div>
+
+                          {/* EVENTS */}
+
+                          <div className="mt-2.5 space-y-1.5">
+
+                            {chatsForDate.map(
+                              (chat) => (
+
+                                <button
+                                  key={chat.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedChat(
+                                      chat
+                                    )
+                                  }
+                                  className="group w-full rounded-xl border border-gray-200/80 bg-gray-50 px-2.5 py-2.5 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-white hover:shadow-md"
+                                >
+
+                                  {/* TIME */}
+
+                                  <div className="flex items-center gap-1.5">
+
+                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" />
+
+                                    <p className="truncate text-[11px] font-bold text-gray-900">
+                                      {formatTime(
+                                        chat.start_time
+                                      )}
+                                    </p>
+
+                                  </div>
+
+                                  {/* PERSON */}
+
+                                  <p className="mt-1 truncate text-[12px] font-semibold text-gray-700 transition group-hover:text-black">
+                                    {getChatName(
+                                      chat
+                                    )}
+                                  </p>
+
+                                  {/* LOCATION */}
+
+                                  {chat.location && (
+                                    <p className="mt-1 flex items-center gap-1 truncate text-[10px] text-gray-400">
+
+                                      <span>
+                                        📍
+                                      </span>
+
+                                      <span className="truncate">
+                                        {chat.location}
+                                      </span>
+
+                                    </p>
+                                  )}
+
+                                </button>
+
+                              )
+                            )}
+
+                          </div>
+
+                        </div>
+                      )
+                    }
+                  )}
+
+                </div>
+
+              </div>
 
             </div>
 
-          )}
+            {/* CALENDAR HELPER */}
 
-        </section>
+            <div className="mt-4 flex items-center justify-between">
 
-        {/* ============================================
-            HISTORY
-        ============================================ */}
-
-        {pastChats.length > 0 && (
-
-          <section className="mt-12">
-
-            <div className="mb-4">
-
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-                History
+              <p className="text-xs text-gray-400">
+                Click a coffee chat to view details.
               </p>
 
-              <h2 className="mt-1 text-2xl font-bold">
-                Past coffee chats
-              </h2>
-
-            </div>
-
-            <div className="space-y-3">
-
-              {pastChats.map((chat) => (
-
-                <div
-                  key={chat.id}
-                  className="rounded-2xl border border-gray-200/70 bg-white p-5"
-                >
-
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-                    <div>
-
-                      <p className="font-semibold">
-                        {chat.otherUser
-                          ?.first_name ||
-                          'Unknown'}{' '}
-                        {chat.otherUser
-                          ?.last_name ||
-                          ''}
-                      </p>
-
-                      <p className="mt-1 text-sm text-gray-400">
-                        {formatDate(
-                          chat.scheduled_date
-                        )}{' '}
-                        ·{' '}
-                        {formatTime(
-                          chat.start_time
-                        )}
-                      </p>
-
-                    </div>
-
-                    <span
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                        chat.status ===
-                        'cancelled'
-                          ? 'bg-red-50 text-red-600'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {chat.status ===
-                      'cancelled'
-                        ? 'Cancelled'
-                        : 'Completed'}
-                    </span>
-
-                  </div>
-
-                </div>
-
-              ))}
+              <p className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-400 shadow-sm">
+                {upcomingChats.length}{' '}
+                upcoming
+              </p>
 
             </div>
 
@@ -813,7 +1055,584 @@ export default function CoffeeChatsPage() {
 
         )}
 
+        {/* ============================================
+            LIST VIEW
+        ============================================ */}
+
+        {viewMode === 'list' && (
+          <>
+
+            {/* ============================================
+                UPCOMING
+            ============================================ */}
+
+            <section>
+
+              <div className="mb-5 flex items-end justify-between gap-4">
+
+                <div>
+
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                    Upcoming
+                  </p>
+
+                  <h2 className="mt-1 text-3xl font-bold tracking-tight">
+                    Your next chats
+                  </h2>
+
+                  <p className="mt-2 text-sm text-gray-500">
+                    Quickly see who you&apos;re meeting,
+                    when, and where.
+                  </p>
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push('/schedule')
+                  }
+                  className="shrink-0 rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
+                >
+                  + Schedule
+                </button>
+
+              </div>
+
+              {upcomingChats.length === 0 ? (
+
+                <div className="rounded-[1.75rem] border border-gray-200/80 bg-white p-10 shadow-sm">
+
+                  <div className="text-center">
+
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 text-2xl">
+                      ☕
+                    </div>
+
+                    <h3 className="mt-5 text-lg font-bold">
+                      No upcoming coffee chats
+                    </h3>
+
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+                      Connect with someone and schedule
+                      a coffee chat to start building
+                      your network.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push('/connections')
+                      }
+                      className="mt-6 rounded-xl bg-black px-5 py-3 text-sm font-bold text-white transition hover:bg-gray-800"
+                    >
+                      View connections →
+                    </button>
+
+                  </div>
+
+                </div>
+
+              ) : (
+
+                <div className="space-y-3">
+
+                  {upcomingChats.map((chat) => (
+
+                    <div
+                      key={chat.id}
+                      className="group overflow-hidden rounded-[1.5rem] border border-gray-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                    >
+
+                      <div className="p-5 sm:p-6">
+
+                        {/* TOP */}
+
+                        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+
+                          {/* PERSON */}
+
+                          <div className="flex min-w-0 items-center gap-4">
+
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-base font-bold text-gray-700">
+                              {(
+                                chat.otherUser
+                                  ?.first_name || '?'
+                              )
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+
+                            <div className="min-w-0">
+
+                              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
+                                Coffee chat with
+                              </p>
+
+                              <h3 className="mt-1 truncate text-xl font-bold tracking-tight">
+                                {chat.otherUser
+                                  ?.first_name ||
+                                  'Unknown'}{' '}
+                                {chat.otherUser
+                                  ?.last_name ||
+                                  ''}
+                              </h3>
+
+                            </div>
+
+                          </div>
+
+                          {/* STATUS */}
+
+                          <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[11px] font-semibold text-gray-600">
+
+                            <span className="h-1.5 w-1.5 rounded-full bg-black" />
+
+                            Scheduled
+
+                          </div>
+
+                        </div>
+
+                        {/* DETAILS */}
+
+                        <div className="mt-5 grid gap-3 border-t border-gray-100 pt-5 sm:grid-cols-3">
+
+                          {/* DATE */}
+
+                          <div className="rounded-2xl bg-gray-50 p-3.5">
+
+                            <div className="flex items-center gap-2">
+
+                              <span className="text-sm">
+                                📅
+                              </span>
+
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                Date
+                              </p>
+
+                            </div>
+
+                            <p className="mt-2 text-sm font-semibold text-gray-900">
+                              {formatDate(
+                                chat.scheduled_date
+                              )}
+                            </p>
+
+                          </div>
+
+                          {/* TIME */}
+
+                          <div className="rounded-2xl bg-gray-50 p-3.5">
+
+                            <div className="flex items-center gap-2">
+
+                              <span className="text-sm">
+                                🕐
+                              </span>
+
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                Time
+                              </p>
+
+                            </div>
+
+                            <p className="mt-2 text-sm font-semibold text-gray-900">
+                              {formatTime(
+                                chat.start_time
+                              )}
+
+                              {chat.end_time && (
+                                <>
+                                  {' – '}
+                                  {formatTime(
+                                    chat.end_time
+                                  )}
+                                </>
+                              )}
+                            </p>
+
+                          </div>
+
+                          {/* LOCATION */}
+
+                          <div className="rounded-2xl bg-gray-50 p-3.5">
+
+                            <div className="flex items-center gap-2">
+
+                              <span className="text-sm">
+                                📍
+                              </span>
+
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                Location
+                              </p>
+
+                            </div>
+
+                            <p className="mt-2 break-words text-sm font-semibold text-gray-900">
+                              {chat.location ||
+                                'Location not set'}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                      {/* ACTIONS */}
+
+                      <div className="flex flex-col gap-2 border-t border-gray-100 bg-gray-50/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedChat(
+                              chat
+                            )
+                          }
+                          className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+                        >
+                          View details
+                        </button>
+
+                        <div className="flex gap-2">
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(
+                                `/chats/${chat.match_id}`
+                              )
+                            }
+                            className="flex-1 rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 sm:flex-none"
+                          >
+                            Message
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              cancelCoffeeChat(chat)
+                            }
+                            disabled={
+                              cancellingId === chat.id
+                            }
+                            className="flex-1 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                          >
+                            {cancellingId === chat.id
+                              ? 'Cancelling...'
+                              : 'Cancel'}
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+            </section>
+
+            {/* ============================================
+                HISTORY
+            ============================================ */}
+
+            {pastChats.length > 0 && (
+
+              <section className="mt-12">
+
+                <div className="mb-4">
+
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                    History
+                  </p>
+
+                  <h2 className="mt-1 text-2xl font-bold tracking-tight">
+                    Past coffee chats
+                  </h2>
+
+                </div>
+
+                <div className="space-y-2.5">
+
+                  {pastChats.map((chat) => (
+
+                    <div
+                      key={chat.id}
+                      className="rounded-2xl border border-gray-200/80 bg-white px-5 py-4 shadow-sm"
+                    >
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                        <div className="flex items-center gap-3">
+
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-sm font-bold text-gray-600">
+                            {(
+                              chat.otherUser
+                                ?.first_name || '?'
+                            )
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+
+                          <div>
+
+                            <p className="font-semibold text-gray-900">
+                              {chat.otherUser
+                                ?.first_name ||
+                                'Unknown'}{' '}
+                              {chat.otherUser
+                                ?.last_name ||
+                                ''}
+                            </p>
+
+                            <p className="mt-1 text-sm text-gray-400">
+                              {formatDate(
+                                chat.scheduled_date
+                              )}{' '}
+                              ·{' '}
+                              {formatTime(
+                                chat.start_time
+                              )}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                        <span
+                          className={`w-fit rounded-full px-3 py-1 text-[11px] font-semibold ${
+                            chat.status ===
+                            'cancelled'
+                              ? 'bg-red-50 text-red-600'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {chat.status ===
+                          'cancelled'
+                            ? 'Cancelled'
+                            : 'Completed'}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              </section>
+
+            )}
+
+          </>
+        )}
+
       </div>
+
+      {/* ============================================
+          CALENDAR EVENT POPUP
+      ============================================ */}
+
+      {selectedChat && (
+
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-5 backdrop-blur-[2px]"
+          onClick={() =>
+            setSelectedChat(null)
+          }
+        >
+
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-gray-200/80 bg-white shadow-2xl"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            {/* TOP */}
+
+            <div className="p-6">
+
+              <div className="flex items-start justify-between gap-4">
+
+                <div className="min-w-0 flex-1">
+
+                  <div className="flex items-center gap-2">
+
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base">
+                      ☕
+                    </div>
+
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+                      Coffee chat
+                    </p>
+
+                  </div>
+
+                  <h2 className="mt-4 truncate text-2xl font-bold tracking-tight">
+                    {getChatName(
+                      selectedChat
+                    )}
+                  </h2>
+
+                  <div className="mt-3 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                    Scheduled
+                  </div>
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedChat(null)
+                  }
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-500 transition hover:bg-gray-200 hover:text-black"
+                  aria-label="Close coffee chat details"
+                >
+                  ×
+                </button>
+
+              </div>
+
+            </div>
+
+            {/* DETAILS */}
+
+            <div className="border-t border-gray-100 px-6 py-5">
+
+              <div className="space-y-4">
+
+                {/* DATE */}
+
+                <div className="flex items-start gap-3">
+
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-sm">
+                    📅
+                  </div>
+
+                  <div>
+
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                      Date
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold text-gray-900">
+                      {formatDate(
+                        selectedChat.scheduled_date
+                      )}
+                    </p>
+
+                  </div>
+
+                </div>
+
+                {/* TIME */}
+
+                <div className="flex items-start gap-3">
+
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-sm">
+                    🕐
+                  </div>
+
+                  <div>
+
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                      Time
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold text-gray-900">
+                      {formatTime(
+                        selectedChat.start_time
+                      )}
+
+                      {selectedChat.end_time && (
+                        <>
+                          {' – '}
+                          {formatTime(
+                            selectedChat.end_time
+                          )}
+                        </>
+                      )}
+                    </p>
+
+                  </div>
+
+                </div>
+
+                {/* LOCATION */}
+
+                <div className="flex items-start gap-3">
+
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-sm">
+                    📍
+                  </div>
+
+                  <div className="min-w-0">
+
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+                      Location
+                    </p>
+
+                    <p className="mt-1 break-words text-sm font-semibold text-gray-900">
+                      {selectedChat.location ||
+                        'Location not set'}
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* ACTIONS */}
+
+            <div className="border-t border-gray-100 bg-gray-50/60 p-5">
+
+              <div className="flex gap-3">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      `/chats/${selectedChat.match_id}`
+                    )
+                  }
+                  className="flex-1 rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+                >
+                  Message
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedChat(null)
+                  }
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                >
+                  Close
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
       {/* BOTTOM NAV */}
 
@@ -865,7 +1684,7 @@ export default function CoffeeChatsPage() {
             onClick={() =>
               router.push('/chats')
             }
-            className="flex flex-col items-center gap-1 px-3 text-xs font-semibold text-black"
+            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
           >
             <span className="text-base">
               💬

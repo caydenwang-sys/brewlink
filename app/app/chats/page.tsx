@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import BottomNav from '../components/BottomNav'
 
 type Profile = {
   id: string
@@ -880,87 +881,7 @@ export default function ChatsPage() {
 
       {/* BOTTOM NAV */}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white">
-
-        <div className="mx-auto flex max-w-3xl justify-around px-3 py-4">
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/dashboard')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              🏠
-            </span>
-            Home
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/discover')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              ✨
-            </span>
-            Discover
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/connections')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👥
-            </span>
-            Connections
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/chats')
-            }
-            className="relative flex flex-col items-center gap-1 px-3 text-xs font-semibold text-black"
-          >
-
-            <span className="text-base">
-              💬
-            </span>
-
-            Chats
-
-            {totalUnread > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-black px-1 text-[10px] font-bold text-white">
-                {totalUnread}
-              </span>
-            )}
-
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/profile')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👤
-            </span>
-            Profile
-          </button>
-
-        </div>
-
-      </nav>
+      <BottomNav />
 
     </main>
   )

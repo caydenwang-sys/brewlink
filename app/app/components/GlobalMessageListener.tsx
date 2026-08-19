@@ -8,6 +8,7 @@ export default function GlobalMessageListener() {
     const supabase = createClient()
 
     let channel: ReturnType<typeof supabase.channel> | null = null
+    let mounted = true
 
     async function startListener() {
       // ============================================
@@ -18,7 +19,7 @@ export default function GlobalMessageListener() {
         data: { user },
       } = await supabase.auth.getUser()
 
-      if (!user) {
+      if (!user || !mounted) {
         return
       }
 
@@ -28,11 +29,14 @@ export default function GlobalMessageListener() {
       )
 
       // ============================================
-      // LISTEN FOR NEW MESSAGES
+      // CREATE UNIQUE CHANNEL
       // ============================================
 
+      const channelName =
+        `global-messages-${user.id}-${crypto.randomUUID()}`
+
       channel = supabase
-        .channel(`global-messages-${user.id}`)
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -41,6 +45,10 @@ export default function GlobalMessageListener() {
             table: 'messages',
           },
           (payload) => {
+            if (!mounted) {
+              return
+            }
+
             const newMessage = payload.new as {
               id: number
               match_id: number
@@ -79,7 +87,11 @@ export default function GlobalMessageListener() {
             )
           }
         )
-        .subscribe((status) => {
+        .subscribe((status, error) => {
+          if (!mounted) {
+            return
+          }
+
           console.log(
             'Global message listener status:',
             status
@@ -93,13 +105,15 @@ export default function GlobalMessageListener() {
 
           if (status === 'CHANNEL_ERROR') {
             console.error(
-              'Global message listener channel error'
+              'Global message listener channel error:',
+              error
             )
           }
 
           if (status === 'TIMED_OUT') {
             console.error(
-              'Global message listener timed out'
+              'Global message listener timed out:',
+              error
             )
           }
         })
@@ -112,6 +126,8 @@ export default function GlobalMessageListener() {
     // ============================================
 
     return () => {
+      mounted = false
+
       if (channel) {
         console.log(
           'Removing global message listener'

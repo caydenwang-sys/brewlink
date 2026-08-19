@@ -323,6 +323,20 @@ export default function NotificationsPage() {
     }
 
     // ==========================================
+    // CONNECTION REQUEST
+    // ==========================================
+
+    if (
+      notification.type ===
+        'connection_request' ||
+      notification.type ===
+        'new_connection_request'
+    ) {
+      router.push('/connections')
+      return
+    }
+
+    // ==========================================
     // COFFEE CHAT REQUEST
     // ==========================================
 
@@ -330,7 +344,14 @@ export default function NotificationsPage() {
       notification.type ===
       'coffee_chat_request'
     ) {
-      router.push('/requests')
+      if (notification.related_match_id) {
+        router.push(
+          `/schedule?match=${notification.related_match_id}`
+        )
+      } else {
+        router.push('/schedule')
+      }
+
       return
     }
 
@@ -342,7 +363,14 @@ export default function NotificationsPage() {
       notification.type ===
       'coffee_chat_accepted'
     ) {
-      router.push('/schedule')
+      if (notification.related_match_id) {
+        router.push(
+          `/schedule?match=${notification.related_match_id}`
+        )
+      } else {
+        router.push('/schedule')
+      }
+
       return
     }
 
@@ -354,7 +382,14 @@ export default function NotificationsPage() {
       notification.type ===
       'coffee_chat_declined'
     ) {
-      router.push('/schedule')
+      if (notification.related_match_id) {
+        router.push(
+          `/schedule?match=${notification.related_match_id}`
+        )
+      } else {
+        router.push('/schedule')
+      }
+
       return
     }
 

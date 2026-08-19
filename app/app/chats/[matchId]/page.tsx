@@ -285,6 +285,12 @@ export default function ConversationPage() {
                   : message
             )
         )
+
+        window.dispatchEvent(
+          new CustomEvent(
+            'brewlink:new-message'
+          )
+        )
       }
     }
 
@@ -455,6 +461,12 @@ export default function ConversationPage() {
                   )
               )
 
+              window.dispatchEvent(
+                new CustomEvent(
+                  'brewlink:new-message'
+                )
+              )
+
               console.log(
                 'Realtime message marked as read'
               )
@@ -474,17 +486,6 @@ export default function ConversationPage() {
               console.log(
                 `Realtime successfully connected for match ${matchId}`
               )
-
-              // ======================================
-              // REFRESH MESSAGES AFTER SUBSCRIBING
-              // ======================================
-              //
-              // This catches any message that may
-              // have been inserted while the page
-              // was loading or before Realtime
-              // finished connecting.
-              //
-              // ======================================
 
               const {
                 data: refreshedMessages,
@@ -521,10 +522,6 @@ export default function ConversationPage() {
 
                 return
               }
-
-              // ======================================
-              // MERGE REFRESHED MESSAGES
-              // ======================================
 
               setMessages(
                 (currentMessages) => {
@@ -584,10 +581,6 @@ export default function ConversationPage() {
             }
           }
         )
-
-    // ============================================
-    // CLEANUP
-    // ============================================
 
     return () => {
 
@@ -663,10 +656,6 @@ export default function ConversationPage() {
       return
     }
 
-    // ============================================
-    // ADD MESSAGE LOCALLY
-    // ============================================
-
     setMessages(
       (currentMessages) => {
 
@@ -690,18 +679,10 @@ export default function ConversationPage() {
     setNewMessage('')
     setSending(false)
 
-    // ============================================
-    // SCROLL TO NEW MESSAGE
-    // ============================================
-
     setTimeout(() => {
       scrollToBottom('smooth')
     }, 50)
   }
-
-  // ============================================
-  // FORMAT MESSAGE TIME
-  // ============================================
 
   function formatMessageTime(
     timestamp: string
@@ -711,10 +692,6 @@ export default function ConversationPage() {
 
     const now =
       new Date()
-
-    // ============================================
-    // TODAY
-    // ============================================
 
     const isToday =
       date.toDateString() ===
@@ -729,10 +706,6 @@ export default function ConversationPage() {
         }
       )
     }
-
-    // ============================================
-    // YESTERDAY
-    // ============================================
 
     const yesterday =
       new Date(now)
@@ -754,10 +727,6 @@ export default function ConversationPage() {
         }
       )}`
     }
-
-    // ============================================
-    // WITHIN LAST 7 DAYS
-    // ============================================
 
     const sevenDaysAgo =
       new Date(now)
@@ -781,10 +750,6 @@ export default function ConversationPage() {
       )}`
     }
 
-    // ============================================
-    // OLDER THAN 7 DAYS
-    // ============================================
-
     return `${date.toLocaleDateString(
       [],
       {
@@ -799,10 +764,6 @@ export default function ConversationPage() {
       }
     )}`
   }
-
-  // ============================================
-  // LOADING
-  // ============================================
 
   if (loading) {
     return (
@@ -824,10 +785,6 @@ export default function ConversationPage() {
     )
   }
 
-  // ============================================
-  // NAME
-  // ============================================
-
   const firstName =
     otherUser?.first_name ||
     'Unknown'
@@ -840,16 +797,8 @@ export default function ConversationPage() {
     `${firstName.charAt(0)}${lastName.charAt(0)}`
       .toUpperCase()
 
-  // ============================================
-  // PAGE
-  // ============================================
-
   return (
     <main className="min-h-screen bg-[#f7f7f5]">
-
-      {/* ======================================== */}
-      {/* HEADER */}
-      {/* ======================================== */}
 
       <header className="sticky top-0 z-30 border-b border-gray-200/70 bg-white/95 backdrop-blur">
 
@@ -884,10 +833,6 @@ export default function ConversationPage() {
         </div>
 
       </header>
-
-      {/* ======================================== */}
-      {/* MESSAGES */}
-      {/* ======================================== */}
 
       <div className="mx-auto flex min-h-[calc(100vh-73px)] max-w-3xl flex-col px-5 pb-32 pt-6 sm:px-6">
 
@@ -949,8 +894,6 @@ export default function ConversationPage() {
                     }`}
                   >
 
-                    {/* MESSAGE BUBBLE */}
-
                     <div
                       className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                         isMine
@@ -960,8 +903,6 @@ export default function ConversationPage() {
                     >
                       {message.message}
                     </div>
-
-                    {/* TIME + READ RECEIPT */}
 
                     <div
                       className={`mt-1 flex items-center gap-1 px-1 text-[10px] text-gray-400 ${
@@ -1006,10 +947,6 @@ export default function ConversationPage() {
               )
             })}
 
-            {/* ================================== */}
-            {/* SCROLL TARGET */}
-            {/* ================================== */}
-
             <div
               ref={messagesEndRef}
               className="h-px"
@@ -1021,10 +958,6 @@ export default function ConversationPage() {
         )}
 
       </div>
-
-      {/* ======================================== */}
-      {/* MESSAGE INPUT */}
-      {/* ======================================== */}
 
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/95 backdrop-blur">
 

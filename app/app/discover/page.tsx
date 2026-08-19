@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import BottomNav from '../components/BottomNav'
 
 type Profile = {
   id: string
@@ -13,6 +14,9 @@ type Profile = {
   bio: string | null
   career_goal: string | null
   profile_photo_url: string | null
+  is_discoverable: boolean
+  show_academic_info: boolean
+  show_career_goal: boolean
 }
 
 type ScoredProfile = {
@@ -122,7 +126,33 @@ export default function DiscoverPage() {
       }
 
       // ========================================
-      // EXCLUDE CONNECTED / PENDING USERS
+      // GET BLOCKED RELATIONSHIPS
+      // ========================================
+
+      const {
+        data: blockedRelationships,
+        error: blockedRelationshipsError,
+      } = await supabase
+        .from('blocked_users')
+        .select(`
+          blocker_id,
+          blocked_id
+        `)
+        .or(
+          `blocker_id.eq.${user.id},blocked_id.eq.${user.id}`
+        )
+
+      if (blockedRelationshipsError) {
+        setError(
+          `Could not load blocked users: ${blockedRelationshipsError.message}`
+        )
+
+        setLoading(false)
+        return
+      }
+
+      // ========================================
+      // EXCLUDE CONNECTED / PENDING / BLOCKED USERS
       // ========================================
 
       const excludedUserIds = new Set<string>()
@@ -139,6 +169,19 @@ export default function DiscoverPage() {
         ) {
           excludedUserIds.add(otherUserId)
         }
+      }
+
+      for (
+        const blockedRelationship of
+        blockedRelationships || []
+      ) {
+        const otherUserId =
+          blockedRelationship.blocker_id ===
+          user.id
+            ? blockedRelationship.blocked_id
+            : blockedRelationship.blocker_id
+
+        excludedUserIds.add(otherUserId)
       }
 
       // ========================================
@@ -158,9 +201,13 @@ export default function DiscoverPage() {
           academic_year,
           bio,
           career_goal,
-          profile_photo_url
+          profile_photo_url,
+          is_discoverable,
+          show_academic_info,
+          show_career_goal
         `)
         .neq('id', user.id)
+        .eq('is_discoverable', true)
 
       if (profilesError) {
         setError(
@@ -198,9 +245,12 @@ export default function DiscoverPage() {
                 .toLowerCase()
           ) {
             score += 3
-            reasons.push(
-              'Same career interest'
-            )
+
+            if (profile.show_career_goal) {
+              reasons.push(
+                'Same career interest'
+              )
+            }
           }
 
           // Same major
@@ -215,7 +265,10 @@ export default function DiscoverPage() {
                 .toLowerCase()
           ) {
             score += 2
-            reasons.push('Same major')
+
+            if (profile.show_academic_info) {
+              reasons.push('Same major')
+            }
           }
 
           // Same academic year
@@ -230,9 +283,12 @@ export default function DiscoverPage() {
                 .toLowerCase()
           ) {
             score += 1
-            reasons.push(
-              'Same academic year'
-            )
+
+            if (profile.show_academic_info) {
+              reasons.push(
+                'Same academic year'
+              )
+            }
           }
 
           return {
@@ -277,6 +333,42 @@ export default function DiscoverPage() {
     setError('')
 
     const supabase = createClient()
+
+    // ========================================
+    // CHECK FOR BLOCK
+    // ========================================
+
+    const {
+      data: blockedRelationship,
+      error: blockedRelationshipError,
+    } = await supabase
+      .from('blocked_users')
+      .select(`
+        blocker_id,
+        blocked_id
+      `)
+      .or(
+        `and(blocker_id.eq.${userId},blocked_id.eq.${currentProfile.id}),and(blocker_id.eq.${currentProfile.id},blocked_id.eq.${userId})`
+      )
+      .maybeSingle()
+
+    if (blockedRelationshipError) {
+      setError(
+        `Could not check blocked users: ${blockedRelationshipError.message}`
+      )
+
+      setSending(false)
+      return
+    }
+
+    if (blockedRelationship) {
+      setError(
+        'You cannot connect with this student.'
+      )
+
+      setSending(false)
+      return
+    }
 
     // ========================================
     // CHECK FOR EXISTING CONNECTION
@@ -350,54 +442,6 @@ export default function DiscoverPage() {
 
       setSending(false)
       return
-    }
-
-    // ========================================
-    // CREATE NOTIFICATION
-    // ========================================
-
-    const senderName =
-      `${currentProfile ? '' : ''}`
-
-    const {
-      data: senderProfile,
-    } = await supabase
-      .from('profiles')
-      .select(
-        'first_name, last_name'
-      )
-      .eq('id', userId)
-      .maybeSingle()
-
-    const firstName =
-      senderProfile?.first_name?.trim() ||
-      'Someone'
-
-    const lastName =
-      senderProfile?.last_name?.trim() ||
-      ''
-
-    const fullName =
-      `${firstName} ${lastName}`.trim()
-
-    const {
-      error: notificationError,
-    } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: currentProfile.id,
-        type: 'connection_request',
-        title: 'New Connection Request',
-        message: `${fullName} wants to connect with you on BrewLink.`,
-        related_user_id: userId,
-        is_read: false,
-      })
-
-    if (notificationError) {
-      console.error(
-        'Could not create notification:',
-        notificationError.message
-      )
     }
 
     // ========================================
@@ -519,13 +563,6 @@ export default function DiscoverPage() {
 
             </div>
 
-            {profiles.length > 0 &&
-              currentProfile && (
-                <div className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 shadow-sm">
-                  {currentIndex + 1} / {profiles.length}
-                </div>
-              )}
-
           </div>
 
           <p className="mt-3 max-w-md leading-relaxed text-gray-500">
@@ -635,14 +672,16 @@ export default function DiscoverPage() {
                     {currentProfile.last_name}
                   </h2>
 
-                  <p className="mt-2 text-sm font-medium text-white/90">
-                    {currentProfile.major ||
-                      'Major not listed'}
+                  {currentProfile.show_academic_info && (
+                    <p className="mt-2 text-sm font-medium text-white/90">
+                      {currentProfile.major ||
+                        'Major not listed'}
 
-                    {currentProfile.academic_year
-                      ? ` • ${currentProfile.academic_year}`
-                      : ''}
-                  </p>
+                      {currentProfile.academic_year
+                        ? ` • ${currentProfile.academic_year}`
+                        : ''}
+                    </p>
+                  )}
 
                 </div>
 
@@ -681,7 +720,8 @@ export default function DiscoverPage() {
 
                 {/* CAREER */}
 
-                {currentProfile.career_goal && (
+                {currentProfile.show_career_goal &&
+                  currentProfile.career_goal && (
                   <div
                     className={
                       currentMatch.reasons.length > 0
@@ -706,7 +746,10 @@ export default function DiscoverPage() {
                 {currentProfile.bio && (
                   <div
                     className={
-                      currentProfile.career_goal ||
+                      (
+                        currentProfile.show_career_goal &&
+                        currentProfile.career_goal
+                      ) ||
                       currentMatch.reasons.length > 0
                         ? 'mt-6'
                         : ''
@@ -727,7 +770,10 @@ export default function DiscoverPage() {
                 {/* FALLBACK */}
 
                 {!currentProfile.bio &&
-                  !currentProfile.career_goal &&
+                  !(
+                    currentProfile.show_career_goal &&
+                    currentProfile.career_goal
+                  ) &&
                   currentMatch.reasons.length === 0 && (
                     <p className="text-sm text-gray-400">
                       This student hasn&apos;t added
@@ -787,73 +833,7 @@ export default function DiscoverPage() {
 
       {/* BOTTOM NAV */}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white">
-
-        <div className="mx-auto flex max-w-3xl justify-around px-3 py-4">
-
-          <button
-            onClick={() =>
-              router.push('/dashboard')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              🏠
-            </span>
-            Home
-          </button>
-
-          <button
-            onClick={() =>
-              router.push('/discover')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs font-semibold"
-          >
-            <span className="text-base">
-              ✨
-            </span>
-            Discover
-          </button>
-
-          <button
-            onClick={() =>
-              router.push('/connections')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👥
-            </span>
-            Connections
-          </button>
-
-          <button
-            onClick={() =>
-              router.push('/chats')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              💬
-            </span>
-            Chats
-          </button>
-
-          <button
-            onClick={() =>
-              router.push('/profile')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👤
-            </span>
-            Profile
-          </button>
-
-        </div>
-
-      </nav>
+      <BottomNav />
 
     </main>
   )

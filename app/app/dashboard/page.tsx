@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import BottomNav from '../components/BottomNav'
 
 type Profile = {
   first_name: string | null
@@ -821,6 +822,17 @@ export default function DashboardPage() {
             <button
               onClick={() =>
                 router.push(
+                  '/settings'
+                )
+              }
+              className="rounded-full px-4 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-black"
+            >
+              Settings
+            </button>
+
+            <button
+              onClick={() =>
+                router.push(
                   '/profile'
                 )
               }
@@ -963,7 +975,7 @@ export default function DashboardPage() {
           <button
             onClick={() =>
               router.push(
-                '/schedule'
+                '/coffee-chats?view=calendar'
               )
             }
             className="col-span-2 rounded-2xl border border-gray-200/70 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:col-span-1"
@@ -1008,7 +1020,7 @@ export default function DashboardPage() {
             <button
               onClick={() =>
                 router.push(
-                  '/schedule'
+                  '/coffee-chats?view=calendar'
                 )
               }
               className="text-sm font-semibold text-gray-500 transition hover:text-black"
@@ -1068,7 +1080,7 @@ export default function DashboardPage() {
                     key={meeting.id}
                     onClick={() =>
                       router.push(
-                        '/schedule'
+                        '/coffee-chats?view=calendar'
                       )
                     }
                     className="w-full rounded-2xl border border-gray-200/70 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
@@ -1294,83 +1306,7 @@ export default function DashboardPage() {
 
       {/* BOTTOM NAV */}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white">
-
-        <div className="mx-auto flex max-w-3xl justify-around px-3 py-4">
-
-          <button
-            onClick={() =>
-              router.push(
-                '/dashboard'
-              )
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs font-semibold"
-          >
-            <span className="text-base">
-              🏠
-            </span>
-            Home
-          </button>
-
-          <button
-            onClick={() =>
-              router.push(
-                '/discover'
-              )
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              ✨
-            </span>
-            Discover
-          </button>
-
-          <button
-            onClick={() =>
-              router.push(
-                '/connections'
-              )
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👥
-            </span>
-            Connections
-          </button>
-
-          <button
-            onClick={() =>
-              router.push(
-                '/chats'
-              )
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              💬
-            </span>
-            Chats
-          </button>
-
-          <button
-            onClick={() =>
-              router.push(
-                '/profile'
-              )
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👤
-            </span>
-            Profile
-          </button>
-
-        </div>
-
-      </nav>
+      <BottomNav />
 
     </main>
   )

@@ -7,12 +7,11 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-type AvailabilitySlot = {
+type Project = {
   id: number
   user_id: string
-  day_of_week: number
-  start_time: string
-  end_time: string
+  title: string
+  description: string | null
 }
 
 const onboardingSteps = [
@@ -29,27 +28,14 @@ const onboardingSteps = [
   { number: 11, title: 'Preview', shortTitle: 'Preview' },
 ]
 
-const days = [
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-  { value: 7, label: 'Sunday' },
-]
-
-export default function AvailabilityOnboardingPage() {
+export default function ProjectsOnboardingPage() {
   const router = useRouter()
 
   const [userId, setUserId] =
     useState('')
 
-  const [
-    availabilitySlots,
-    setAvailabilitySlots,
-  ] =
-    useState<AvailabilitySlot[]>([])
+  const [projects, setProjects] =
+    useState<Project[]>([])
 
   const [loading, setLoading] =
     useState(true)
@@ -66,13 +52,13 @@ export default function AvailabilityOnboardingPage() {
   ] =
     useState<number | null>(null)
 
-  const [day, setDay] =
-    useState(1)
-
-  const [startTime, setStartTime] =
+  const [title, setTitle] =
     useState('')
 
-  const [endTime, setEndTime] =
+  const [
+    description,
+    setDescription,
+  ] =
     useState('')
 
   const [saving, setSaving] =
@@ -90,7 +76,7 @@ export default function AvailabilityOnboardingPage() {
   const [message, setMessage] =
     useState('')
 
-  const currentStep = 9
+  const currentStep = 7
 
   const progress =
     Math.round(
@@ -101,7 +87,7 @@ export default function AvailabilityOnboardingPage() {
     )
 
   useEffect(() => {
-    async function loadAvailability() {
+    async function loadProjects() {
       const supabase =
         createClient()
 
@@ -129,161 +115,82 @@ export default function AvailabilityOnboardingPage() {
       const {
         data,
         error:
-          availabilityError,
+          projectError,
       } =
         await supabase
-          .from('availability')
+          .from('projects')
           .select(`
             id,
             user_id,
-            day_of_week,
-            start_time,
-            end_time
+            title,
+            description
           `)
           .eq(
             'user_id',
             user.id
           )
           .order(
-            'day_of_week',
+            'created_at',
             {
-              ascending: true,
-            }
-          )
-          .order(
-            'start_time',
-            {
-              ascending: true,
+              ascending: false,
             }
           )
 
-      if (availabilityError) {
+      if (projectError) {
         setError(
-          `Could not load availability: ${availabilityError.message}`
+          `Could not load projects: ${projectError.message}`
         )
         setLoading(false)
         return
       }
 
-      setAvailabilitySlots(
+      setProjects(
         (data ||
-          []) as AvailabilitySlot[]
+          []) as Project[]
       )
 
       setLoading(false)
     }
 
-    loadAvailability()
+    loadProjects()
   }, [])
-
-  function getDayLabel(
-    dayValue: number
-  ) {
-    return (
-      days.find(
-        (item) =>
-          item.value ===
-          dayValue
-      )?.label ||
-      `Day ${dayValue}`
-    )
-  }
-
-  function formatTime(
-    value: string
-  ) {
-    const [
-      rawHour,
-      rawMinute,
-    ] =
-      value.split(':')
-
-    const hour =
-      Number(rawHour)
-
-    const minute =
-      rawMinute ||
-      '00'
-
-    if (
-      Number.isNaN(hour)
-    ) {
-      return value
-    }
-
-    const period =
-      hour >= 12
-        ? 'PM'
-        : 'AM'
-
-    const displayHour =
-      hour % 12 || 12
-
-    return `${displayHour}:${minute} ${period}`
-  }
-
-  function timesOverlap(
-    startA: string,
-    endA: string,
-    startB: string,
-    endB: string
-  ) {
-    return (
-      startA < endB &&
-      endA > startB
-    )
-  }
 
   function resetEditor() {
     setEditingId(null)
-    setDay(1)
-    setStartTime('')
-    setEndTime('')
+    setTitle('')
+    setDescription('')
     setEditorOpen(false)
   }
 
-  function openNewEditor(
-    dayValue?: number
-  ) {
+  function openNewEditor() {
     setError('')
     setMessage('')
     setEditingId(null)
-    setDay(
-      dayValue ||
-      1
-    )
-    setStartTime('')
-    setEndTime('')
+    setTitle('')
+    setDescription('')
     setEditorOpen(true)
   }
 
   function openEditEditor(
-    slot: AvailabilitySlot
+    project: Project
   ) {
     setError('')
     setMessage('')
     setEditingId(
-      slot.id
+      project.id
     )
-    setDay(
-      slot.day_of_week
+    setTitle(
+      project.title ||
+        ''
     )
-    setStartTime(
-      slot.start_time.slice(
-        0,
-        5
-      )
-    )
-    setEndTime(
-      slot.end_time.slice(
-        0,
-        5
-      )
+    setDescription(
+      project.description ||
+        ''
     )
     setEditorOpen(true)
   }
 
-  async function saveSlot() {
+  async function saveProject() {
     if (
       !userId ||
       saving
@@ -291,55 +198,12 @@ export default function AvailabilityOnboardingPage() {
       return
     }
 
-    if (!startTime) {
-      setError(
-        'Start time is required.'
-      )
-      return
-    }
+    const cleanedTitle =
+      title.trim()
 
-    if (!endTime) {
+    if (!cleanedTitle) {
       setError(
-        'End time is required.'
-      )
-      return
-    }
-
-    if (
-      startTime >= endTime
-    ) {
-      setError(
-        'End time must be later than start time.'
-      )
-      return
-    }
-
-    const overlapping =
-      availabilitySlots.find(
-        (slot) =>
-          slot.day_of_week ===
-            day &&
-          slot.id !==
-            editingId &&
-          timesOverlap(
-            startTime,
-            endTime,
-            slot.start_time.slice(
-              0,
-              5
-            ),
-            slot.end_time.slice(
-              0,
-              5
-            )
-          )
-      )
-
-    if (overlapping) {
-      setError(
-        `This overlaps with another ${getDayLabel(
-          day
-        )} availability slot.`
+        'Project title is required.'
       )
       return
     }
@@ -354,12 +218,11 @@ export default function AvailabilityOnboardingPage() {
     const payload = {
       user_id:
         userId,
-      day_of_week:
-        day,
-      start_time:
-        startTime,
-      end_time:
-        endTime,
+      title:
+        cleanedTitle,
+      description:
+        description.trim() ||
+        null,
     }
 
     if (
@@ -371,7 +234,7 @@ export default function AvailabilityOnboardingPage() {
           updateError,
       } =
         await supabase
-          .from('availability')
+          .from('projects')
           .update(payload)
           .eq(
             'id',
@@ -384,42 +247,32 @@ export default function AvailabilityOnboardingPage() {
           .select(`
             id,
             user_id,
-            day_of_week,
-            start_time,
-            end_time
+            title,
+            description
           `)
           .single()
 
       if (updateError) {
         setError(
-          `Could not update availability: ${updateError.message}`
+          `Could not update project: ${updateError.message}`
         )
         setSaving(false)
         return
       }
 
-      setAvailabilitySlots(
+      setProjects(
         (current) =>
-          current
-            .map(
-              (slot) =>
-                slot.id ===
-                editingId
-                  ? data as AvailabilitySlot
-                  : slot
-            )
-            .sort(
-              (a, b) =>
-                a.day_of_week -
-                  b.day_of_week ||
-                a.start_time.localeCompare(
-                  b.start_time
-                )
-            )
+          current.map(
+            (item) =>
+              item.id ===
+              editingId
+                ? data as Project
+                : item
+          )
       )
 
       setMessage(
-        'Availability updated.'
+        'Project updated.'
       )
     } else {
       const {
@@ -428,42 +281,33 @@ export default function AvailabilityOnboardingPage() {
           insertError,
       } =
         await supabase
-          .from('availability')
+          .from('projects')
           .insert(payload)
           .select(`
             id,
             user_id,
-            day_of_week,
-            start_time,
-            end_time
+            title,
+            description
           `)
           .single()
 
       if (insertError) {
         setError(
-          `Could not add availability: ${insertError.message}`
+          `Could not add project: ${insertError.message}`
         )
         setSaving(false)
         return
       }
 
-      setAvailabilitySlots(
-        (current) =>
-          [
-            ...current,
-            data as AvailabilitySlot,
-          ].sort(
-            (a, b) =>
-              a.day_of_week -
-                b.day_of_week ||
-              a.start_time.localeCompare(
-                b.start_time
-              )
-          )
+      setProjects(
+        (current) => [
+          data as Project,
+          ...current,
+        ]
       )
 
       setMessage(
-        'Availability added.'
+        'Project added.'
       )
     }
 
@@ -471,8 +315,8 @@ export default function AvailabilityOnboardingPage() {
     resetEditor()
   }
 
-  async function deleteSlot(
-    slotId: number
+  async function deleteProject(
+    projectId: number
   ) {
     if (
       !userId ||
@@ -485,7 +329,7 @@ export default function AvailabilityOnboardingPage() {
     setError('')
     setMessage('')
     setDeletingId(
-      slotId
+      projectId
     )
 
     const supabase =
@@ -496,11 +340,11 @@ export default function AvailabilityOnboardingPage() {
         deleteError,
     } =
       await supabase
-        .from('availability')
+        .from('projects')
         .delete()
         .eq(
           'id',
-          slotId
+          projectId
         )
         .eq(
           'user_id',
@@ -509,29 +353,30 @@ export default function AvailabilityOnboardingPage() {
 
     if (deleteError) {
       setError(
-        `Could not delete availability: ${deleteError.message}`
+        `Could not delete project: ${deleteError.message}`
       )
       setDeletingId(null)
       return
     }
 
-    setAvailabilitySlots(
+    setProjects(
       (current) =>
         current.filter(
-          (slot) =>
-            slot.id !==
-            slotId
+          (item) =>
+            item.id !==
+            projectId
         )
     )
 
     if (
-      editingId === slotId
+      editingId ===
+      projectId
     ) {
       resetEditor()
     }
 
     setMessage(
-      'Availability removed.'
+      'Project deleted.'
     )
 
     setDeletingId(null)
@@ -539,7 +384,7 @@ export default function AvailabilityOnboardingPage() {
 
   function goNext() {
     router.push(
-      '/onboarding/privacy'
+      '/onboarding/matching'
     )
   }
 
@@ -548,11 +393,11 @@ export default function AvailabilityOnboardingPage() {
       <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5]">
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm">
-            📅
+            🚀
           </div>
 
           <p className="mt-4 text-sm font-medium text-gray-500">
-            Loading availability...
+            Loading projects...
           </p>
         </div>
       </main>
@@ -572,7 +417,7 @@ export default function AvailabilityOnboardingPage() {
             type="button"
             onClick={() =>
               router.push(
-                '/onboarding/matching'
+                '/onboarding/work'
               )
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
@@ -662,16 +507,16 @@ export default function AvailabilityOnboardingPage() {
         <section className="mb-8">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            When you&apos;re free
+            What you&apos;ve built
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-            Availability
+            Projects
           </h1>
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
-            Add your usual weekly availability so BrewLink can make scheduling easier.
-            You can add multiple time windows on the same day, or skip this step.
+            Add apps, research, startups, portfolios, case studies,
+            or anything else you&apos;ve built. This step is optional.
           </p>
 
         </section>
@@ -689,14 +534,14 @@ export default function AvailabilityOnboardingPage() {
             <div>
 
               <p className="text-sm font-semibold text-gray-900">
-                Weekly schedule
+                Your projects
               </p>
 
               <p className="mt-1 text-xs text-gray-400">
-                {availabilitySlots.length}{' '}
-                {availabilitySlots.length === 1
-                  ? 'time slot'
-                  : 'time slots'} added
+                {projects.length}{' '}
+                {projects.length === 1
+                  ? 'project'
+                  : 'projects'} added
                 • no limit
               </p>
 
@@ -704,12 +549,12 @@ export default function AvailabilityOnboardingPage() {
 
             <button
               type="button"
-              onClick={() =>
-                openNewEditor()
+              onClick={
+                openNewEditor
               }
               className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
             >
-              + Add time
+              + Add project
             </button>
 
           </div>
@@ -720,144 +565,106 @@ export default function AvailabilityOnboardingPage() {
             </p>
           )}
 
-          {availabilitySlots.length === 0 ? (
+          {projects.length === 0 ? (
 
             <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5">
 
               <p className="text-sm font-semibold text-gray-700">
-                No availability added yet
+                No projects added yet
               </p>
 
               <p className="mt-1 text-sm leading-relaxed text-gray-500">
-                That&apos;s okay. Add your usual free times or skip this step.
+                That&apos;s okay. Add something you&apos;ve built,
+                or skip this step and come back later.
               </p>
 
             </div>
 
           ) : (
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-4 space-y-3">
 
-              {days.map(
-                (dayItem) => {
-                  const daySlots =
-                    availabilitySlots.filter(
-                      (slot) =>
-                        slot.day_of_week ===
-                        dayItem.value
-                    )
+              {projects.map(
+                (project) => (
 
-                  if (
-                    daySlots.length === 0
-                  ) {
-                    return null
-                  }
+                  <div
+                    key={
+                      project.id
+                    }
+                    className="rounded-2xl border border-gray-200 bg-white p-5"
+                  >
 
-                  return (
-                    <div
-                      key={
-                        dayItem.value
-                      }
-                      className="rounded-2xl bg-gray-50 p-4"
-                    >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
 
-                        <p className="text-sm font-bold text-gray-900">
-                          {dayItem.label}
-                        </p>
+                        <h3 className="break-words text-base font-bold text-gray-900">
+                          {project.title}
+                        </h3>
+
+                        {project.description ? (
+
+                          <p className="mt-2 break-words text-sm leading-relaxed text-gray-500">
+                            {project.description}
+                          </p>
+
+                        ) : (
+
+                          <p className="mt-2 text-sm text-gray-400">
+                            No description added.
+                          </p>
+
+                        )}
+
+                      </div>
+
+                      <div className="flex shrink-0 gap-2">
 
                         <button
                           type="button"
                           onClick={() =>
-                            openNewEditor(
-                              dayItem.value
+                            openEditEditor(
+                              project
                             )
                           }
-                          className="text-xs font-semibold text-gray-400 transition hover:text-black"
+                          className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-black"
                         >
-                          + Add
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const confirmed =
+                              window.confirm(
+                                `Delete "${project.title}"?`
+                              )
+
+                            if (confirmed) {
+                              deleteProject(
+                                project.id
+                              )
+                            }
+                          }}
+                          disabled={
+                            deletingId !==
+                            null
+                          }
+                          className="rounded-xl border border-red-100 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deletingId ===
+                          project.id
+                            ? 'Deleting...'
+                            : 'Delete'}
                         </button>
 
                       </div>
 
-                      <div className="mt-3 space-y-2">
-
-                        {daySlots.map(
-                          (slot) => (
-
-                          <div
-                            key={
-                              slot.id
-                            }
-                            className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                          >
-
-                            <p className="text-sm font-semibold text-gray-700">
-                              {formatTime(
-                                slot.start_time
-                              )}
-                              {' – '}
-                              {formatTime(
-                                slot.end_time
-                              )}
-                            </p>
-
-                            <div className="flex gap-2">
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openEditEditor(
-                                    slot
-                                  )
-                                }
-                                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-black"
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const confirmed =
-                                    window.confirm(
-                                      `Remove ${dayItem.label} ${formatTime(
-                                        slot.start_time
-                                      )} – ${formatTime(
-                                        slot.end_time
-                                      )}?`
-                                    )
-
-                                  if (confirmed) {
-                                    deleteSlot(
-                                      slot.id
-                                    )
-                                  }
-                                }}
-                                disabled={
-                                  deletingId !==
-                                  null
-                                }
-                                className="rounded-lg border border-red-100 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {deletingId ===
-                                slot.id
-                                  ? 'Removing...'
-                                  : 'Remove'}
-                              </button>
-
-                            </div>
-
-                          </div>
-
-                        ))}
-
-                      </div>
-
                     </div>
-                  )
-                }
+
+                  </div>
+
+                )
               )}
 
             </div>
@@ -874,14 +681,14 @@ export default function AvailabilityOnboardingPage() {
 
                   <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
                     {editingId !== null
-                      ? 'Edit availability'
-                      : 'New availability'}
+                      ? 'Edit project'
+                      : 'New project'}
                   </p>
 
                   <h3 className="mt-1 text-lg font-bold">
                     {editingId !== null
-                      ? 'Update time window'
-                      : 'Add a time window'}
+                      ? 'Update project'
+                      : 'Add a project'}
                   </h3>
 
                 </div>
@@ -892,7 +699,7 @@ export default function AvailabilityOnboardingPage() {
                     resetEditor
                   }
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-400 transition hover:text-black"
-                  aria-label="Close availability editor"
+                  aria-label="Close project editor"
                 >
                   ×
                 </button>
@@ -904,99 +711,69 @@ export default function AvailabilityOnboardingPage() {
                 <div>
 
                   <label className="text-sm font-semibold">
-                    Day
+                    Project title{' '}
+                    <span className="text-red-500">
+                      *
+                    </span>
                   </label>
 
-                  <select
+                  <input
+                    type="text"
                     value={
-                      day
+                      title
                     }
                     onChange={(event) => {
-                      setDay(
-                        Number(
-                          event.target.value
-                        )
+                      setTitle(
+                        event.target.value
                       )
                       setError('')
                     }}
+                    placeholder="e.g. BrewLink"
+                    maxLength={120}
                     className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-                  >
-                    {days.map(
-                      (dayItem) => (
-                        <option
-                          key={
-                            dayItem.value
-                          }
-                          value={
-                            dayItem.value
-                          }
-                        >
-                          {dayItem.label}
-                        </option>
-                      )
-                    )}
-                  </select>
+                  />
 
                 </div>
 
-                <div className="grid gap-5 sm:grid-cols-2">
+                <div>
 
-                  <div>
+                  <div className="flex items-center justify-between gap-3">
 
                     <label className="text-sm font-semibold">
-                      Start time{' '}
-                      <span className="text-red-500">
-                        *
-                      </span>
+                      Description
                     </label>
 
-                    <input
-                      type="time"
-                      value={
-                        startTime
-                      }
-                      onChange={(event) => {
-                        setStartTime(
-                          event.target.value
-                        )
-                        setError('')
-                      }}
-                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-                    />
+                    <span className="text-xs text-gray-400">
+                      {description.length}/700
+                    </span>
 
                   </div>
 
-                  <div>
+                  <p className="mt-2 text-xs leading-relaxed text-gray-400">
+                    Optional. Explain what you built, the problem it solves,
+                    your role, or what you learned.
+                  </p>
 
-                    <label className="text-sm font-semibold">
-                      End time{' '}
-                      <span className="text-red-500">
-                        *
-                      </span>
-                    </label>
-
-                    <input
-                      type="time"
-                      value={
-                        endTime
-                      }
-                      onChange={(event) => {
-                        setEndTime(
+                  <textarea
+                    value={
+                      description
+                    }
+                    onChange={(event) => {
+                      if (
+                        event.target.value.length <=
+                        700
+                      ) {
+                        setDescription(
                           event.target.value
                         )
-                        setError('')
-                      }}
-                      className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-                    />
-
-                  </div>
+                      }
+                    }}
+                    rows={5}
+                    placeholder="Describe your project..."
+                    className="mt-2 w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 leading-relaxed outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                  />
 
                 </div>
-
-                <p className="text-xs leading-relaxed text-gray-400">
-                  Add separate windows if you are free at multiple times on the same day.
-                  Overlapping windows are prevented.
-                </p>
 
                 <div className="flex flex-col gap-3 sm:flex-row">
 
@@ -1016,7 +793,7 @@ export default function AvailabilityOnboardingPage() {
                   <button
                     type="button"
                     onClick={
-                      saveSlot
+                      saveProject
                     }
                     disabled={
                       saving
@@ -1027,7 +804,7 @@ export default function AvailabilityOnboardingPage() {
                       ? 'Saving...'
                       : editingId !== null
                         ? 'Save Changes'
-                        : 'Add Time'}
+                        : 'Add Project'}
                   </button>
 
                 </div>
@@ -1048,7 +825,7 @@ export default function AvailabilityOnboardingPage() {
                 type="button"
                 onClick={() =>
                   router.push(
-                    '/onboarding/matching'
+                    '/onboarding/work'
                   )
                 }
                 className="w-full rounded-xl border border-gray-200 bg-white px-5 py-4 font-semibold text-gray-600 transition hover:bg-gray-50 sm:w-auto"
@@ -1089,11 +866,12 @@ export default function AvailabilityOnboardingPage() {
           </p>
 
           <p className="mt-2 text-sm font-semibold text-gray-700">
-            Privacy & Discovery
+            Matching Preferences
           </p>
 
           <p className="mt-1 text-sm leading-relaxed text-gray-500">
-            Choose whether you appear in discovery and which profile details other students can see.
+            Tell BrewLink what kinds of people and connections
+            you want to prioritize.
           </p>
 
         </section>
