@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   useRouter,
@@ -38,7 +38,7 @@ type ViewMode =
   | 'list'
   | 'calendar'
 
-export default function CoffeeChatsPage() {
+function CoffeeChatsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -1999,5 +1999,27 @@ export default function CoffeeChatsPage() {
       </nav>
 
     </main>
+  )
+}
+
+export default function CoffeeChatsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5]">
+          <div className="text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm">
+              ☕
+            </div>
+
+            <p className="mt-4 text-sm font-medium text-gray-500">
+              Loading your coffee chats...
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <CoffeeChatsPageContent />
+    </Suspense>
   )
 }
