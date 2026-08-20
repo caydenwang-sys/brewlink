@@ -122,6 +122,13 @@ export default function SearchPage() {
       new Set()
     )
 
+  const [
+    connectionStatuses,
+    setConnectionStatuses,
+  ] = useState<
+    Record<string, string>
+  >({})
+
   const [error, setError] =
     useState('')
 
@@ -510,6 +517,9 @@ export default function SearchPage() {
       const excludedIds =
         new Set<string>()
 
+      const nextConnectionStatuses:
+        Record<string, string> = {}
+
       for (
         const connection of
           connections || []
@@ -520,17 +530,14 @@ export default function SearchPage() {
             ? connection.receiver_id
             : connection.sender_id
 
-        if (
-          connection.status ===
-            'accepted' ||
-          connection.status ===
-            'pending'
-        ) {
-          excludedIds.add(
-            otherUserId
-          )
-        }
+        nextConnectionStatuses[
+          otherUserId
+        ] = connection.status
       }
+
+      setConnectionStatuses(
+        nextConnectionStatuses
+      )
 
       for (
         const blockedRelationship of
@@ -3472,6 +3479,11 @@ export default function SearchPage() {
                         profile.id
                       )
 
+                    const connectionStatus =
+                      connectionStatuses[
+                        profile.id
+                      ]
+
                     const isSending =
                       sendingId ===
                       profile.id
@@ -3611,15 +3623,32 @@ export default function SearchPage() {
                             onClick={(event) => {
                               event.stopPropagation()
 
+                              if (
+                                connectionStatus ===
+                                  'accepted' ||
+                                connectionStatus ===
+                                  'pending'
+                              ) {
+                                return
+                              }
+
                               sendConnectionRequest(
                                 profile.id
                               )
                             }}
                             disabled={
                               isSending ||
-                              requestSent
+                              requestSent ||
+                              connectionStatus ===
+                                'accepted' ||
+                              connectionStatus ===
+                                'pending'
                             }
                             className={`w-full flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:w-auto ${
+                              connectionStatus ===
+                                'accepted' ||
+                              connectionStatus ===
+                                'pending' ||
                               requestSent
                                 ? 'cursor-default bg-gray-100 text-gray-500'
                                 : 'bg-black text-white hover:bg-gray-800'
@@ -3628,9 +3657,15 @@ export default function SearchPage() {
 
                             {isSending
                               ? 'Sending...'
-                              : requestSent
-                                ? 'Request sent ✓'
-                                : 'Connect'}
+                              : connectionStatus ===
+                                  'accepted'
+                                ? 'Already connected ✓'
+                                : connectionStatus ===
+                                    'pending'
+                                  ? 'Request pending'
+                                  : requestSent
+                                    ? 'Request sent ✓'
+                                    : 'Connect'}
 
                           </button>
 
@@ -3697,6 +3732,11 @@ export default function SearchPage() {
           sentIds.has(
             profile.id
           )
+
+        const connectionStatus =
+          connectionStatuses[
+            profile.id
+          ]
 
         const isSending =
           sendingId ===
@@ -4268,16 +4308,33 @@ export default function SearchPage() {
 
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
+                      if (
+                        connectionStatus ===
+                          'accepted' ||
+                        connectionStatus ===
+                          'pending'
+                      ) {
+                        return
+                      }
+
                       sendConnectionRequest(
                         profile.id
                       )
-                    }
+                    }}
                     disabled={
                       isSending ||
-                      requestSent
+                      requestSent ||
+                      connectionStatus ===
+                        'accepted' ||
+                      connectionStatus ===
+                        'pending'
                     }
                     className={`w-full rounded-xl px-5 py-3.5 text-sm font-semibold transition ${
+                      connectionStatus ===
+                        'accepted' ||
+                      connectionStatus ===
+                        'pending' ||
                       requestSent
                         ? 'cursor-default bg-gray-100 text-gray-500'
                         : 'bg-black text-white hover:bg-gray-800'
@@ -4286,9 +4343,15 @@ export default function SearchPage() {
 
                     {isSending
                       ? 'Sending...'
-                      : requestSent
-                        ? 'Request sent ✓'
-                        : `Connect with ${profile.first_name || 'student'}`}
+                      : connectionStatus ===
+                          'accepted'
+                        ? 'Already connected ✓'
+                        : connectionStatus ===
+                            'pending'
+                          ? 'Request pending'
+                          : requestSent
+                            ? 'Request sent ✓'
+                            : `Connect with ${profile.first_name || 'student'}`}
 
                   </button>
 

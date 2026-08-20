@@ -17,6 +17,7 @@ type Profile = {
   is_discoverable: boolean
   show_academic_info: boolean
   show_career_goal: boolean
+  resume_url: string | null
 }
 
 type ScoredProfile = {
@@ -204,7 +205,8 @@ export default function DiscoverPage() {
           profile_photo_url,
           is_discoverable,
           show_academic_info,
-          show_career_goal
+          show_career_goal,
+          resume_url
         `)
         .neq('id', user.id)
         .eq('is_discoverable', true)
@@ -481,6 +483,53 @@ export default function DiscoverPage() {
   ) {
     return Math.round(
       (score / 6) * 100
+    )
+  }
+
+  // ============================================
+  // VIEW RESUME
+  // ============================================
+
+  async function viewResume(
+    resumePath: string
+  ) {
+    if (!resumePath) {
+      return
+    }
+
+    setError('')
+
+    const supabase = createClient()
+
+    const {
+      data,
+      error: signedUrlError,
+    } =
+      await supabase.storage
+        .from('resumes')
+        .createSignedUrl(
+          resumePath,
+          60
+        )
+
+    if (
+      signedUrlError ||
+      !data?.signedUrl
+    ) {
+      setError(
+        `Could not open resume: ${
+          signedUrlError?.message ||
+          'Signed URL could not be created.'
+        }`
+      )
+
+      return
+    }
+
+    window.open(
+      data.signedUrl,
+      '_blank',
+      'noopener,noreferrer'
     )
   }
 
@@ -763,6 +812,41 @@ export default function DiscoverPage() {
                     <p className="mt-2 leading-relaxed text-gray-600">
                       {currentProfile.bio}
                     </p>
+
+                  </div>
+                )}
+
+                {/* RESUME */}
+
+                {currentProfile.resume_url && (
+                  <div
+                    className={
+                      currentProfile.bio ||
+                      (
+                        currentProfile.show_career_goal &&
+                        currentProfile.career_goal
+                      ) ||
+                      currentMatch.reasons.length > 0
+                        ? 'mt-6'
+                        : ''
+                    }
+                  >
+
+                    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                      Resume
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        viewResume(
+                          currentProfile.resume_url as string
+                        )
+                      }
+                      className="mt-3 rounded-full bg-gray-100 px-4 py-2 text-sm font-semibold text-blue-600 underline underline-offset-2 transition hover:bg-gray-200 hover:text-blue-800"
+                    >
+                      Resume ↗
+                    </button>
 
                   </div>
                 )}

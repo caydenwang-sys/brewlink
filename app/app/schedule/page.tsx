@@ -196,6 +196,9 @@ export default function SchedulePage() {
   const [location, setLocation] =
     useState('')
 
+  const [matchSearch, setMatchSearch] =
+    useState('')
+
   // ============================================
   // LOAD SCHEDULE DATA
   // ============================================
@@ -447,6 +450,50 @@ export default function SchedulePage() {
       `${profile.last_name || ''}`
     ).trim() || 'Your match'
   }
+
+  // ============================================
+  // FILTER MATCHES
+  // ============================================
+
+  const filteredMatches =
+    matches.filter((match) => {
+      const search =
+        matchSearch
+          .trim()
+          .toLowerCase()
+
+      if (!search) {
+        return true
+      }
+
+      const profile =
+        getOtherProfile(match)
+
+      if (!profile) {
+        return false
+      }
+
+      const fullName =
+        `${profile.first_name || ''} ${
+          profile.last_name || ''
+        }`
+          .trim()
+          .toLowerCase()
+
+      const major =
+        profile.major
+          ?.toLowerCase() || ''
+
+      const careerGoal =
+        profile.career_goal
+          ?.toLowerCase() || ''
+
+      return (
+        fullName.includes(search) ||
+        major.includes(search) ||
+        careerGoal.includes(search)
+      )
+    })
 
   // ============================================
   // RELOAD MEETINGS
@@ -844,10 +891,6 @@ export default function SchedulePage() {
       return
     }
 
-    // ------------------------------------------
-    // CHECK FOR EXISTING MEETING / REQUEST
-    // ------------------------------------------
-
     const {
       data: existingMeeting,
       error: existingMeetingError,
@@ -910,10 +953,6 @@ export default function SchedulePage() {
       return
     }
 
-    // ------------------------------------------
-    // CREATE PENDING COFFEE CHAT REQUEST
-    // ------------------------------------------
-
     const {
       data: newMeeting,
       error: meetingError,
@@ -973,10 +1012,6 @@ export default function SchedulePage() {
       return
     }
 
-    // ------------------------------------------
-    // UPDATE MEETINGS STATE
-    // ------------------------------------------
-
     if (newMeeting) {
       setMeetings(
         (current) => [
@@ -985,10 +1020,6 @@ export default function SchedulePage() {
         ]
       )
     }
-
-    // ------------------------------------------
-    // REMOVE REQUESTED SLOT
-    // ------------------------------------------
 
     setOverlappingTimes(
       (current) =>
@@ -1002,10 +1033,6 @@ export default function SchedulePage() {
             )
         )
     )
-
-    // ------------------------------------------
-    // SUCCESS
-    // ------------------------------------------
 
     setSuccess(
       `Coffee chat request sent to ${getProfileName(
@@ -1042,9 +1069,22 @@ export default function SchedulePage() {
 
     const supabase = createClient()
 
-    // ------------------------------------------
-    // UPDATE DATABASE
-    // ------------------------------------------
+    const meeting =
+      meetings.find(
+        (meeting) =>
+          meeting.id === meetingId
+      )
+
+    const meetingMatch =
+      matches.find(
+        (match) =>
+          match.id === meeting?.match_id
+      )
+
+    const otherUserId =
+      meetingMatch
+        ? getOtherUserId(meetingMatch)
+        : null
 
     const {
       error: cancelError,
@@ -1073,9 +1113,83 @@ export default function SchedulePage() {
       return
     }
 
-    // ------------------------------------------
-    // REMOVE FROM UPCOMING UI
-    // ------------------------------------------
+    if (
+      otherUserId &&
+      meeting
+    ) {
+      const {
+        data: myProfile,
+      } =
+        await supabase
+          .from('profiles')
+          .select(`
+            first_name,
+            last_name
+          `)
+          .eq(
+            'id',
+            userId
+          )
+          .single()
+
+      const cancellerName =
+        (
+          `${myProfile?.first_name || ''} ` +
+          `${myProfile?.last_name || ''}`
+        ).trim() || 'Your match'
+
+      let notificationContent =
+        `${cancellerName} cancelled your coffee chat`
+
+      if (
+        meeting.scheduled_date &&
+        meeting.start_time
+      ) {
+        notificationContent +=
+          ` scheduled for ${formatDate(
+            meeting.scheduled_date
+          )} at ${formatTime(
+            meeting.start_time
+          )}.`
+      } else {
+        notificationContent += '.'
+      }
+
+      const {
+        error: notificationError,
+      } =
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id:
+              otherUserId,
+
+            type:
+              'coffee_chat_cancelled',
+
+            title:
+              'Coffee chat cancelled',
+
+            message:
+              notificationContent,
+
+            related_user_id:
+              userId,
+
+            related_match_id:
+              meeting.match_id,
+
+            is_read:
+              false,
+          })
+
+      if (notificationError) {
+        console.error(
+          'Could not send cancellation notification:',
+          notificationError
+        )
+      }
+    }
 
     setMeetings(
       (current) =>
@@ -1086,28 +1200,13 @@ export default function SchedulePage() {
         )
     )
 
-    // ------------------------------------------
-    // SUCCESS
-    // ------------------------------------------
-
     setSuccess(
       'Your coffee chat has been cancelled.'
     )
 
     setCancelling(null)
 
-    // ------------------------------------------
-    // REFRESH DATABASE STATE
-    // ------------------------------------------
-
     await reloadMeetings()
-
-    // ------------------------------------------
-    // REFRESH AVAILABLE TIMES
-    //
-    // Because the meeting is now cancelled,
-    // its previous time becomes available again.
-    // ------------------------------------------
 
     if (selectedMatch) {
       await findOverlappingTimes(
@@ -1126,10 +1225,6 @@ export default function SchedulePage() {
         meeting.status === 'scheduled'
     )
 
-  // ============================================
-  // LOADING SCREEN
-  // ============================================
-
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5]">
@@ -1147,10 +1242,6 @@ export default function SchedulePage() {
       </main>
     )
   }
-
-  // ============================================
-  // PAGE
-  // ============================================
 
   return (
     <main className="min-h-screen bg-[#f7f7f5] pb-28">
@@ -1207,15 +1298,11 @@ export default function SchedulePage() {
 
         </section>
 
-        {/* ERROR */}
-
         {error && (
           <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
             {error}
           </div>
         )}
-
-        {/* SUCCESS */}
 
         {success && (
           <div className="mb-6 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm text-green-700">
@@ -1281,57 +1368,114 @@ export default function SchedulePage() {
 
             ) : (
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-6">
 
-                {matches.map(
-                  (match) => {
+                {/* SEARCH MATCHES */}
 
-                    const profile =
-                      getOtherProfile(
-                        match
+                <div className="relative">
+
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    🔎
+                  </span>
+
+                  <input
+                    type="text"
+                    value={matchSearch}
+                    onChange={(event) =>
+                      setMatchSearch(
+                        event.target.value
                       )
+                    }
+                    placeholder="Search connections..."
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-3 pl-11 pr-10 text-sm outline-none transition focus:border-gray-400 focus:bg-white focus:ring-2 focus:ring-gray-100"
+                  />
 
-                    const isSelected =
-                      selectedMatch?.id ===
-                      match.id
+                  {matchSearch && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMatchSearch('')
+                      }
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 transition hover:text-black"
+                      aria-label="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
 
-                    return (
-                      <button
-                        key={match.id}
-                        type="button"
-                        onClick={() =>
-                          selectMatch(
+                </div>
+
+                {filteredMatches.length === 0 ? (
+
+                  <div className="mt-4 rounded-2xl bg-gray-50 p-6 text-center">
+
+                    <p className="font-semibold">
+                      No matches found
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      Try searching by name, major, or career interest.
+                    </p>
+
+                  </div>
+
+                ) : (
+
+                  <div className="mt-4 space-y-3">
+
+                    {filteredMatches.map(
+                      (match) => {
+
+                        const profile =
+                          getOtherProfile(
                             match
                           )
-                        }
-                        className={`w-full rounded-2xl border p-4 text-left transition ${
-                          isSelected
-                            ? 'border-black bg-white shadow-sm'
-                            : 'border-gray-200/70 bg-gray-50 hover:bg-white'
-                        }`}
-                      >
 
-                        <p className="font-semibold">
-                          {getProfileName(
-                            match
-                          )}
-                        </p>
+                        const isSelected =
+                          selectedMatch?.id ===
+                          match.id
 
-                        {profile?.major && (
-                          <p className="mt-1 text-sm text-gray-500">
-                            {profile.major}
-                          </p>
-                        )}
+                        return (
+                          <button
+                            key={match.id}
+                            type="button"
+                            onClick={() =>
+                              selectMatch(
+                                match
+                              )
+                            }
+                            className={`w-full rounded-2xl border p-4 text-left transition ${
+                              isSelected
+                                ? 'border-black bg-white shadow-sm'
+                                : 'border-gray-200/70 bg-gray-50 hover:bg-white'
+                            }`}
+                          >
 
-                        {profile?.career_goal && (
-                          <p className="mt-1 text-sm text-gray-400">
-                            {profile.career_goal}
-                          </p>
-                        )}
+                            <p className="font-semibold">
+                              {getProfileName(
+                                match
+                              )}
+                            </p>
 
-                      </button>
-                    )
-                  }
+                            {profile?.major && (
+                              <p className="mt-1 text-sm text-gray-500">
+                                {profile.major}
+                              </p>
+                            )}
+
+                            {profile?.career_goal && (
+                              <p className="mt-1 text-sm text-gray-400">
+                                {profile.career_goal}
+                              </p>
+                            )}
+
+                          </button>
+                        )
+                      }
+                    )}
+
+                  </div>
+
                 )}
 
               </div>
@@ -1384,8 +1528,6 @@ export default function SchedulePage() {
                   These are the times when your availability overlaps.
                 </p>
 
-                {/* LOCATION */}
-
                 <div className="mt-6">
 
                   <label className="text-sm font-semibold text-gray-700">
@@ -1409,8 +1551,6 @@ export default function SchedulePage() {
 
                 </div>
 
-                {/* LOADING */}
-
                 {loadingTimes && (
                   <div className="mt-8 rounded-2xl bg-gray-50 p-6 text-center">
 
@@ -1424,8 +1564,6 @@ export default function SchedulePage() {
 
                   </div>
                 )}
-
-                {/* NO OVERLAPS */}
 
                 {!loadingTimes &&
                   overlappingTimes.length === 0 && (
@@ -1457,8 +1595,6 @@ export default function SchedulePage() {
 
                     </div>
                   )}
-
-                {/* AVAILABLE TIMES */}
 
                 {!loadingTimes &&
                   overlappingTimes.length > 0 && (
@@ -1531,8 +1667,6 @@ export default function SchedulePage() {
 
                     </div>
                   )}
-
-                {/* MANAGE AVAILABILITY */}
 
                 <button
                   type="button"

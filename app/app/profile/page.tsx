@@ -554,6 +554,12 @@ export default function ProfilePage() {
   ] =
     useState(false)
 
+  const [
+    emailPopupOpen,
+    setEmailPopupOpen,
+  ] =
+    useState(false)
+
   // ============================================
   // LOAD PROFILE
   // ============================================
@@ -8065,30 +8071,89 @@ export default function ProfilePage() {
                     {profileLinks.map(
                       (link, index) => (
 
-                        <span
+                        <a
                           key={
                             link.id ??
                             `preview-link-${index}`
                           }
-                          className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600"
+                          href={
+                            normalizeProfileLinkUrl(
+                              link.url
+                            )
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(event) =>
+                            event.stopPropagation()
+                          }
+                          className="cursor-pointer rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-blue-600 underline underline-offset-2 transition hover:bg-gray-200 hover:text-blue-800"
                         >
                           {link.label ||
-                            'Link'}
-                        </span>
+                            'Link'} ↗
+                        </a>
 
                       )
                     )}
 
                     {contactEmail && (
-                      <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600">
-                        Email
-                      </span>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setEmailPopupOpen(
+                              true
+                            )
+                          }}
+                          className="cursor-pointer rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-blue-600 underline underline-offset-2 transition hover:bg-gray-200 hover:text-blue-800"
+                        >
+                          Email
+                        </button>
+
+                        {emailPopupOpen && (
+                          <>
+                            <button
+                              type="button"
+                              aria-label="Close email popup"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setEmailPopupOpen(
+                                  false
+                                )
+                              }}
+                              className="fixed inset-0 z-20 cursor-default bg-transparent"
+                            />
+
+                            <div
+                              className="absolute bottom-full left-0 z-30 mb-2 min-w-max max-w-[80vw] rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg"
+                              onClick={(event) =>
+                                event.stopPropagation()
+                              }
+                            >
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">
+                                Email
+                              </p>
+
+                              <p className="mt-1 break-all text-sm font-semibold text-gray-800">
+                                {contactEmail}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     )}
 
                     {resumePath && (
-                      <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600">
-                        Resume
-                      </span>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          viewResume()
+                        }}
+                        className="cursor-pointer rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-blue-600 underline underline-offset-2 transition hover:bg-gray-200 hover:text-blue-800"
+                      >
+                        Resume ↗
+                      </button>
                     )}
 
                   </div>

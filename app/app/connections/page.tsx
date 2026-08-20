@@ -24,6 +24,60 @@ type Profile = {
   profile_photo_url: string | null
 }
 
+type DetailedProfile = Profile & {
+  contact_email: string | null
+  resume_url: string | null
+  contact_visibility: string | null
+}
+
+type Interest = {
+  id: number
+  name: string
+  category: string | null
+}
+
+type Club = {
+  id: number
+  name: string
+  description: string | null
+}
+
+type WorkExperience = {
+  id: number
+  user_id: string
+  company_name: string
+  role_title: string
+  industry: string
+  description: string | null
+  start_date: string
+  end_date: string | null
+  is_current: boolean
+}
+
+type Project = {
+  id: number
+  user_id: string
+  title: string
+  description: string | null
+}
+
+type ProfileLink = {
+  id?: number
+  label: string
+  url: string
+  sort_order: number
+}
+
+type ProfileDetails = {
+  profile: DetailedProfile
+  interests: Interest[]
+  clubs: Club[]
+  workExperiences: WorkExperience[]
+  projects: Project[]
+  links: ProfileLink[]
+  canViewContact: boolean
+}
+
 type Match = {
   id: number
   user_1_id: string
@@ -54,6 +108,26 @@ export default function ConnectionsPage() {
 
   const [openMenuId, setOpenMenuId] =
     useState<number | null>(null)
+
+  const [
+    selectedProfile,
+    setSelectedProfile,
+  ] = useState<Profile | null>(null)
+
+  const [
+    selectedProfileDetails,
+    setSelectedProfileDetails,
+  ] = useState<ProfileDetails | null>(null)
+
+  const [
+    profileDetailsLoading,
+    setProfileDetailsLoading,
+  ] = useState(false)
+
+  const [
+    profileDetailsError,
+    setProfileDetailsError,
+  ] = useState('')
 
   const [
     relationshipAction,
@@ -504,6 +578,352 @@ export default function ConnectionsPage() {
     return match?.id || null
   }
 
+  // ============================================
+  // PROFILE DETAILS
+  // ============================================
+
+  async function openProfile(
+    person: Profile,
+    isAcceptedConnection: boolean
+  ) {
+    setSelectedProfile(person)
+    setSelectedProfileDetails(null)
+    setProfileDetailsError('')
+    setProfileDetailsLoading(true)
+
+    const supabase = createClient()
+
+    const {
+      data: profileData,
+      error: profileError,
+    } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        major,
+        academic_year,
+        bio,
+        career_goal,
+        profile_photo_url,
+        contact_email,
+        resume_url,
+        contact_visibility
+      `)
+      .eq('id', person.id)
+      .single()
+
+    if (profileError || !profileData) {
+      setProfileDetailsError(
+        `Could not load profile details: ${
+          profileError?.message ||
+          'Profile not found.'
+        }`
+      )
+      setProfileDetailsLoading(false)
+      return
+    }
+
+    const detailedProfile =
+      profileData as DetailedProfile
+
+    const canViewContact =
+      detailedProfile.contact_visibility ===
+        'everyone' ||
+      (
+        isAcceptedConnection &&
+        detailedProfile.contact_visibility ===
+          'connections'
+      )
+
+    const [
+      userInterestResult,
+      userClubResult,
+      workResult,
+      projectResult,
+      linkResult,
+    ] = await Promise.all([
+      supabase
+        .from('user_interests')
+        .select('interest_id')
+        .eq('user_id', person.id),
+
+      supabase
+        .from('user_clubs')
+        .select('club_id')
+        .eq('user_id', person.id),
+
+      supabase
+        .from('work_experience')
+        .select(`
+          id,
+          user_id,
+          company_name,
+          role_title,
+          industry,
+          description,
+          start_date,
+          end_date,
+          is_current
+        `)
+        .eq('user_id', person.id)
+        .order('start_date', {
+          ascending: false,
+        }),
+
+      supabase
+        .from('projects')
+        .select(`
+          id,
+          user_id,
+          title,
+          description
+        `)
+        .eq('user_id', person.id)
+        .order('created_at', {
+          ascending: false,
+        }),
+
+      supabase
+        .from('profile_links')
+        .select(`
+          id,
+          label,
+          url,
+          sort_order
+        `)
+        .eq('user_id', person.id)
+        .order('sort_order', {
+          ascending: true,
+        })
+        .order('id', {
+          ascending: true,
+        }),
+    ])
+
+    if (userInterestResult.error) {
+      console.error(
+        'Could not load profile interests:',
+        userInterestResult.error
+      )
+    }
+
+    if (userClubResult.error) {
+      console.error(
+        'Could not load profile clubs:',
+        userClubResult.error
+      )
+    }
+
+    if (workResult.error) {
+      console.error(
+        'Could not load work experience:',
+        workResult.error
+      )
+    }
+
+    if (projectResult.error) {
+      console.error(
+        'Could not load projects:',
+        projectResult.error
+      )
+    }
+
+    if (linkResult.error) {
+      console.error(
+        'Could not load profile links:',
+        linkResult.error
+      )
+    }
+
+    let loadedInterests: Interest[] = []
+
+    const interestIds =
+      (userInterestResult.data || [])
+        .map(
+          (row) =>
+            row.interest_id
+        )
+        .filter(
+          (id) =>
+            id !== null &&
+            id !== undefined
+        )
+
+    if (interestIds.length > 0) {
+      const {
+        data: interestData,
+        error: interestError,
+      } = await supabase
+        .from('interests')
+        .select(`
+          id,
+          name,
+          category
+        `)
+        .in('id', interestIds)
+        .order('name', {
+          ascending: true,
+        })
+
+      if (interestError) {
+        console.error(
+          'Could not load interests:',
+          interestError
+        )
+      } else {
+        loadedInterests =
+          (interestData || []) as Interest[]
+      }
+    }
+
+    let loadedClubs: Club[] = []
+
+    const clubIds =
+      (userClubResult.data || [])
+        .map(
+          (row) =>
+            row.club_id
+        )
+        .filter(
+          (id) =>
+            id !== null &&
+            id !== undefined
+        )
+
+    if (clubIds.length > 0) {
+      const {
+        data: clubData,
+        error: clubError,
+      } = await supabase
+        .from('clubs')
+        .select(`
+          id,
+          name,
+          description
+        `)
+        .in('id', clubIds)
+        .order('name', {
+          ascending: true,
+        })
+
+      if (clubError) {
+        console.error(
+          'Could not load clubs:',
+          clubError
+        )
+      } else {
+        loadedClubs =
+          (clubData || []) as Club[]
+      }
+    }
+
+    setSelectedProfileDetails({
+      profile:
+        detailedProfile,
+
+      interests:
+        loadedInterests,
+
+      clubs:
+        loadedClubs,
+
+      workExperiences:
+        (workResult.data ||
+          []) as WorkExperience[],
+
+      projects:
+        (projectResult.data ||
+          []) as Project[],
+
+      links:
+        canViewContact
+          ? (linkResult.data ||
+              []) as ProfileLink[]
+          : [],
+
+      canViewContact,
+    })
+
+    setProfileDetailsLoading(false)
+  }
+
+  function closeProfile() {
+    setSelectedProfile(null)
+    setSelectedProfileDetails(null)
+    setProfileDetailsError('')
+    setProfileDetailsLoading(false)
+  }
+
+  async function viewResume() {
+    const resumePath =
+      selectedProfileDetails?.profile
+        .resume_url
+
+    if (
+      !resumePath ||
+      !selectedProfileDetails
+        ?.canViewContact
+    ) {
+      return
+    }
+
+    const supabase = createClient()
+
+    const {
+      data,
+      error: signedUrlError,
+    } =
+      await supabase.storage
+        .from('resumes')
+        .createSignedUrl(
+          resumePath,
+          60
+        )
+
+    if (
+      signedUrlError ||
+      !data?.signedUrl
+    ) {
+      setProfileDetailsError(
+        `Could not open resume: ${
+          signedUrlError?.message ||
+          'Signed URL could not be created.'
+        }`
+      )
+
+      return
+    }
+
+    window.open(
+      data.signedUrl,
+      '_blank',
+      'noopener,noreferrer'
+    )
+  }
+
+  function formatExperienceDate(
+    dateString: string | null
+  ) {
+    if (!dateString) {
+      return ''
+    }
+
+    const date =
+      new Date(
+        `${dateString}T00:00:00`
+      )
+
+    return date.toLocaleDateString(
+      [],
+      {
+        month: 'short',
+        year: 'numeric',
+      }
+    )
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5]">
@@ -634,7 +1054,19 @@ export default function ConnectionsPage() {
                     {/* Profile */}
                     <div className="flex items-start gap-4">
 
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (person) {
+                            openProfile(
+                              person,
+                              false
+                            )
+                          }
+                        }}
+                        className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-100 transition hover:scale-105 hover:ring-2 hover:ring-gray-300"
+                        aria-label={`View ${name}'s profile`}
+                      >
 
                         {person?.profile_photo_url ? (
                           <img
@@ -648,7 +1080,7 @@ export default function ConnectionsPage() {
                           </span>
                         )}
 
-                      </div>
+                      </button>
 
                       <div className="min-w-0 flex-1">
 
@@ -817,7 +1249,17 @@ export default function ConnectionsPage() {
                       {/* Profile */}
                       <div className="flex min-w-0 flex-1 items-center gap-4">
 
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openProfile(
+                              person,
+                              true
+                            )
+                          }
+                          className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-100 transition hover:scale-105 hover:ring-2 hover:ring-gray-300"
+                          aria-label={`View ${name}'s profile`}
+                        >
 
                           {person.profile_photo_url ? (
                             <img
@@ -831,7 +1273,7 @@ export default function ConnectionsPage() {
                             </span>
                           )}
 
-                        </div>
+                        </button>
 
                         <div className="min-w-0">
 
@@ -959,23 +1401,6 @@ export default function ConnectionsPage() {
 
                     </div>
 
-                    {/* Career */}
-                    {person.career_goal && (
-                      <div className="mt-5 border-t border-gray-100 pt-4">
-
-                        <p className="text-sm text-gray-600">
-
-                          <span className="font-semibold text-gray-900">
-                            Career:
-                          </span>{' '}
-
-                          {person.career_goal}
-
-                        </p>
-
-                      </div>
-                    )}
-
                   </div>
                 )
               })}
@@ -1068,6 +1493,548 @@ export default function ConnectionsPage() {
                     ? 'Block user'
                     : 'Remove'}
               </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ======================================== */}
+      {/* PROFILE CARD MODAL */}
+      {/* ======================================== */}
+
+      {selectedProfile && (
+
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5 py-6 backdrop-blur-sm"
+          onClick={
+            closeProfile
+          }
+        >
+
+          <div
+            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            {/* PHOTO */}
+
+            <div className="relative aspect-[4/3.5] w-full shrink-0 overflow-hidden bg-gray-100">
+
+              {selectedProfile.profile_photo_url ? (
+                <img
+                  src={
+                    selectedProfile.profile_photo_url
+                  }
+                  alt={`${getName(
+                    selectedProfile
+                  )} profile`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+
+                  <span className="text-7xl font-bold text-gray-300">
+                    {getInitials(
+                      selectedProfile
+                    )}
+                  </span>
+
+                </div>
+              )}
+
+              <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+
+              <button
+                type="button"
+                onClick={
+                  closeProfile
+                }
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-gray-700 shadow-sm backdrop-blur transition hover:bg-white"
+                aria-label="Close profile"
+              >
+                ✕
+              </button>
+
+              <div className="absolute bottom-5 left-5 right-5 text-white">
+
+                <h2 className="text-3xl font-bold tracking-tight">
+                  {getName(
+                    selectedProfile
+                  )}
+                </h2>
+
+                <p className="mt-1 text-sm font-medium text-white/90">
+
+                  {selectedProfile.major ||
+                    'Major not listed'}
+
+                  {selectedProfile.academic_year
+                    ? ` • ${selectedProfile.academic_year}`
+                    : ''}
+
+                </p>
+
+              </div>
+
+            </div>
+
+            {/* PROFILE INFO */}
+
+            <div className="overflow-y-auto p-6">
+
+              {profileDetailsLoading && (
+
+                <div className="py-10 text-center">
+
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-xl">
+                    ☕
+                  </div>
+
+                  <p className="mt-4 text-sm font-medium text-gray-500">
+                    Loading profile...
+                  </p>
+
+                </div>
+
+              )}
+
+              {profileDetailsError && (
+
+                <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
+                  {profileDetailsError}
+                </div>
+
+              )}
+
+              {selectedProfileDetails &&
+                !profileDetailsLoading && (
+
+                <div className="space-y-7">
+
+                  {/* CAREER */}
+
+                  {selectedProfileDetails.profile
+                    .career_goal && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Career interest
+                      </p>
+
+                      <div className="mt-2 inline-flex rounded-full bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-800">
+                        {
+                          selectedProfileDetails
+                            .profile
+                            .career_goal
+                        }
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* BIO */}
+
+                  {selectedProfileDetails.profile.bio && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        About
+                      </p>
+
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                        {
+                          selectedProfileDetails
+                            .profile.bio
+                        }
+                      </p>
+
+                    </div>
+
+                  )}
+
+                  {/* INTERESTS */}
+
+                  {selectedProfileDetails
+                    .interests.length > 0 && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Interests
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+
+                        {selectedProfileDetails
+                          .interests.map(
+                            (interest) => (
+
+                              <span
+                                key={
+                                  interest.id
+                                }
+                                className="rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700"
+                              >
+                                {
+                                  interest.name
+                                }
+                              </span>
+
+                            )
+                          )}
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* CLUBS */}
+
+                  {selectedProfileDetails
+                    .clubs.length > 0 && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Clubs & organizations
+                      </p>
+
+                      <div className="mt-3 space-y-2">
+
+                        {selectedProfileDetails
+                          .clubs.map(
+                            (club) => (
+
+                              <div
+                                key={
+                                  club.id
+                                }
+                                className="rounded-2xl bg-gray-50 p-4"
+                              >
+
+                                <p className="font-semibold text-gray-900">
+                                  {
+                                    club.name
+                                  }
+                                </p>
+
+                                {club.description && (
+
+                                  <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                                    {
+                                      club.description
+                                    }
+                                  </p>
+
+                                )}
+
+                              </div>
+
+                            )
+                          )}
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* WORK EXPERIENCE */}
+
+                  {selectedProfileDetails
+                    .workExperiences
+                    .length > 0 && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Work experience
+                      </p>
+
+                      <div className="mt-3 space-y-3">
+
+                        {selectedProfileDetails
+                          .workExperiences
+                          .map(
+                            (
+                              experience
+                            ) => (
+
+                              <div
+                                key={
+                                  experience.id
+                                }
+                                className="rounded-2xl border border-gray-200 bg-white p-4"
+                              >
+
+                                <p className="font-semibold text-gray-900">
+                                  {
+                                    experience
+                                      .role_title
+                                  }
+                                </p>
+
+                                <p className="mt-1 text-sm font-medium text-gray-600">
+                                  {
+                                    experience
+                                      .company_name
+                                  }
+                                </p>
+
+                                <p className="mt-1 text-xs text-gray-400">
+
+                                  {formatExperienceDate(
+                                    experience
+                                      .start_date
+                                  )}
+
+                                  {' – '}
+
+                                  {experience
+                                    .is_current
+                                    ? 'Present'
+                                    : formatExperienceDate(
+                                        experience
+                                          .end_date
+                                      )}
+
+                                </p>
+
+                                {experience.industry && (
+
+                                  <p className="mt-2 text-xs font-medium text-gray-500">
+                                    {
+                                      experience
+                                        .industry
+                                    }
+                                  </p>
+
+                                )}
+
+                                {experience.description && (
+
+                                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                                    {
+                                      experience
+                                        .description
+                                    }
+                                  </p>
+
+                                )}
+
+                              </div>
+
+                            )
+                          )}
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* PROJECTS */}
+
+                  {selectedProfileDetails
+                    .projects.length > 0 && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Projects
+                      </p>
+
+                      <div className="mt-3 space-y-3">
+
+                        {selectedProfileDetails
+                          .projects.map(
+                            (project) => (
+
+                              <div
+                                key={
+                                  project.id
+                                }
+                                className="rounded-2xl border border-gray-200 bg-white p-4"
+                              >
+
+                                <p className="font-semibold text-gray-900">
+                                  {
+                                    project.title
+                                  }
+                                </p>
+
+                                {project.description && (
+
+                                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                                    {
+                                      project.description
+                                    }
+                                  </p>
+
+                                )}
+
+                              </div>
+
+                            )
+                          )}
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* LINKS */}
+
+                  {selectedProfileDetails
+                    .canViewContact &&
+                    selectedProfileDetails
+                      .links.length >
+                      0 && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Links
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+
+                        {selectedProfileDetails
+                          .links.map(
+                            (
+                              link,
+                              index
+                            ) => (
+
+                              <a
+                                key={
+                                  link.id ||
+                                  `${link.label}-${index}`
+                                }
+                                href={
+                                  link.url
+                                }
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-full bg-gray-100 px-4 py-2 text-sm font-semibold text-blue-600 underline underline-offset-2 transition hover:bg-gray-200 hover:text-blue-800"
+                              >
+                                {
+                                  link.label
+                                }{' '}
+                                ↗
+                              </a>
+
+                            )
+                          )}
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* CONTACT EMAIL */}
+
+                  {selectedProfileDetails
+                    .canViewContact &&
+                    selectedProfileDetails
+                      .profile
+                      .contact_email && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Contact
+                      </p>
+
+                      <a
+                        href={`mailto:${selectedProfileDetails.profile.contact_email}`}
+                        className="mt-2 inline-block text-sm font-semibold text-blue-600 underline underline-offset-2 hover:text-blue-800"
+                      >
+                        {
+                          selectedProfileDetails
+                            .profile
+                            .contact_email
+                        }
+                      </a>
+
+                    </div>
+
+                  )}
+
+                  {/* RESUME */}
+
+                  {selectedProfileDetails
+                    .canViewContact &&
+                    selectedProfileDetails
+                      .profile
+                      .resume_url && (
+
+                    <div>
+
+                      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-400">
+                        Resume
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={
+                          viewResume
+                        }
+                        className="mt-3 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                      >
+                        View Resume ↗
+                      </button>
+
+                    </div>
+
+                  )}
+
+                  {/* EMPTY PROFILE */}
+
+                  {!selectedProfileDetails
+                    .profile.bio &&
+                    !selectedProfileDetails
+                      .profile
+                      .career_goal &&
+                    selectedProfileDetails
+                      .interests.length ===
+                      0 &&
+                    selectedProfileDetails
+                      .clubs.length ===
+                      0 &&
+                    selectedProfileDetails
+                      .workExperiences
+                      .length ===
+                      0 &&
+                    selectedProfileDetails
+                      .projects.length ===
+                      0 && (
+
+                    <div className="rounded-2xl bg-gray-50 p-5 text-center">
+
+                      <p className="text-sm text-gray-500">
+                        This student hasn&apos;t added additional profile information yet.
+                      </p>
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              )}
 
             </div>
 
