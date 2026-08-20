@@ -313,7 +313,7 @@ export default function NotificationsPage() {
     ) {
       if (notification.related_match_id) {
         router.push(
-          `/chats/${notification.related_match_id}`
+          `/chats/conversation?matchId=${notification.related_match_id}`
         )
       } else {
         router.push('/chats')

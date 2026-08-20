@@ -1593,7 +1593,7 @@ function CoffeeChatsPageContent() {
                             type="button"
                             onClick={() =>
                               router.push(
-                                `/chats/${chat.match_id}`
+                                `/chats/conversation?matchId=${chat.match_id}`
                               )
                             }
                             className="flex-1 rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 sm:flex-none"
@@ -1895,7 +1895,7 @@ function CoffeeChatsPageContent() {
                   type="button"
                   onClick={() =>
                     router.push(
-                      `/chats/${selectedChat.match_id}`
+                      `/chats/conversation?matchId=${selectedChat.match_id}`
                     )
                   }
                   className="flex-1 rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"

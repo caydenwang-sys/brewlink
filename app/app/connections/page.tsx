@@ -1307,7 +1307,7 @@ export default function ConnectionsPage() {
                             }
 
                             router.push(
-                              `/chats/${matchId}`
+                              `/chats/conversation?matchId=${matchId}`
                             )
                           }}
                           className="w-full rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 sm:w-auto"
