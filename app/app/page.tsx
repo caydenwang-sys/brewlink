@@ -1,6 +1,53 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 export default function HomePage() {
+  const router = useRouter()
+
+  const [checkingSession, setCheckingSession] =
+    useState(true)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function checkSession() {
+      const supabase = createClient()
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!mounted) {
+        return
+      }
+
+      if (session) {
+        router.replace('/dashboard')
+        return
+      }
+
+      setCheckingSession(false)
+    }
+
+    checkSession()
+
+    return () => {
+      mounted = false
+    }
+  }, [router])
+
+  if (checkingSession) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-white">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-black" />
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-white">
 
