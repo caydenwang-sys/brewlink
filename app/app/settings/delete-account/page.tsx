@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+const deleteAccountEndpoint =
+  process.env.NEXT_PUBLIC_DELETE_ACCOUNT_ENDPOINT ||
+  'https://brewlink-blush.vercel.app/api/delete-account'
+
 export default function DeleteAccountPage() {
   const router = useRouter()
 
@@ -47,7 +51,7 @@ export default function DeleteAccountPage() {
     }
 
     try {
-      const response = await fetch('/api/delete-account', {
+      const response = await fetch(deleteAccountEndpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
