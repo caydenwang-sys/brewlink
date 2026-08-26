@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { openExternalUrl } from '@/lib/native/openExternalUrl'
 import { useRouter } from 'next/navigation'
 import BottomNav from '../components/BottomNav'
 
@@ -4050,10 +4051,8 @@ export default function ProfilePage() {
       return
     }
 
-    window.open(
-      data.signedUrl,
-      '_blank',
-      'noopener,noreferrer'
+    await openExternalUrl(
+      data.signedUrl
     )
   }
 

@@ -1,18 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'Authorization, Content-Type',
+  'Access-Control-Allow-Methods':
+    'POST, OPTIONS',
+}
+
+function jsonResponse(
+  body: Record<string, unknown>,
+  status = 200
+) {
+  return NextResponse.json(
+    body,
+    {
+      status,
+      headers: corsHeaders,
+    }
+  )
+}
+
+export async function OPTIONS() {
+  return new NextResponse(
+    null,
+    {
+      status: 204,
+      headers: corsHeaders,
+    }
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authorization = request.headers.get('authorization')
 
     if (!authorization?.startsWith('Bearer ')) {
-      return NextResponse.json(
+      return jsonResponse(
         {
           error: 'Unauthorized.',
         },
-        {
-          status: 401,
-        }
+        401
       )
     }
 
@@ -36,13 +65,11 @@ export async function POST(request: NextRequest) {
         'Missing Supabase environment variables.'
       )
 
-      return NextResponse.json(
+      return jsonResponse(
         {
           error: 'Server configuration error.',
         },
-        {
-          status: 500,
-        }
+        500
       )
     }
 
@@ -74,13 +101,11 @@ export async function POST(request: NextRequest) {
         userError
       )
 
-      return NextResponse.json(
+      return jsonResponse(
         {
           error: 'Unauthorized.',
         },
-        {
-          status: 401,
-        }
+        401
       )
     }
 
@@ -116,18 +141,16 @@ export async function POST(request: NextRequest) {
         deleteError
       )
 
-      return NextResponse.json(
+      return jsonResponse(
         {
           error:
             'Could not delete your account.',
         },
-        {
-          status: 500,
-        }
+        500
       )
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
     })
   } catch (error) {
@@ -136,14 +159,12 @@ export async function POST(request: NextRequest) {
       error
     )
 
-    return NextResponse.json(
+    return jsonResponse(
       {
         error:
           'Something went wrong while deleting your account.',
       },
-      {
-        status: 500,
-      }
+      500
     )
   }
 }
