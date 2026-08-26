@@ -1,5 +1,11 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type {
+  Metadata,
+  Viewport,
+} from "next";
+import {
+  Geist,
+  Geist_Mono,
+} from "next/font/google";
 import "./globals.css";
 import GlobalMessageListener from "./components/GlobalMessageListener";
 
@@ -16,6 +22,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BrewLink",
   description: "Connect with students through meaningful conversations.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f8f7f4",
 };
 
 export default function RootLayout({
