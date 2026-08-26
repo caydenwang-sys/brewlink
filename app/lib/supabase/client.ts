@@ -6,6 +6,23 @@ import { Preferences } from '@capacitor/preferences'
 
 let supabase: SupabaseClient | null = null
 
+const serverStorage = {
+  async getItem(_key: string) {
+    return null
+  },
+
+  async setItem(
+    _key: string,
+    _value: string
+  ) {
+    // No persistent storage during server-side rendering.
+  },
+
+  async removeItem(_key: string) {
+    // No persistent storage during server-side rendering.
+  },
+}
+
 const nativeStorage = {
   async getItem(key: string) {
     const { value } = await Preferences.get({
@@ -37,12 +54,17 @@ export function createClient() {
     return supabase
   }
 
+  const storage =
+    typeof window === 'undefined'
+      ? serverStorage
+      : nativeStorage
+
   supabase = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       auth: {
-        storage: nativeStorage,
+        storage,
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
