@@ -186,6 +186,39 @@ export default function SettingsPage() {
 
           </section>
 
+          {/* App Display */}
+          <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
+
+            <h2 className="text-lg font-bold">
+              App Display
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Choose how BrewLink looks on this device.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push('/settings/app-display')}
+              className="mt-5 flex w-full items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 text-left transition hover:bg-gray-50"
+            >
+              <div>
+                <p className="font-semibold">
+                  Appearance
+                </p>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Light, dark, or match your system setting.
+                </p>
+              </div>
+
+              <span className="text-gray-400">
+                →
+              </span>
+            </button>
+
+          </section>
+
           {/* Privacy */}
           <section className="rounded-3xl border border-gray-200/70 bg-white p-6 shadow-sm">
 
