@@ -14,6 +14,27 @@
   --primary-foreground: #ffffff;
 
   --input-background: #ffffff;
+
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+:root[data-theme="dark"] {
+  --background: #0b1424;
+  --foreground: #eef3fb;
+
+  --card: #152238;
+  --border: #34435a;
+
+  --muted: #aab6c8;
+  --placeholder: #8795a9;
+
+  --primary: #eef3fb;
+  --primary-foreground: #10233f;
+
+  --input-background: #1b2940;
 }
 
 @theme inline {
@@ -40,10 +61,27 @@ body {
   min-height: 100%;
 }
 
+html {
+  min-height: 100dvh;
+  background: var(--background);
+}
+
 body {
+  min-height: 100dvh;
+  padding-top: var(--safe-area-top);
+  padding-right: var(--safe-area-right);
+  padding-left: var(--safe-area-left);
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+/* Keep fixed bottom controls above the iPhone Home indicator. */
+.fixed.bottom-0 {
+  padding-bottom: var(--safe-area-bottom);
 }
 
 /* Make form elements easy to see */
@@ -73,4 +111,114 @@ select:focus {
 /* Prevent buttons and inputs from inheriting strange browser styles */
 button {
   font-family: inherit;
+}
+
+/* App-wide dark-mode support for existing BrewLink pages. */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] main {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] .bg-white,
+:root[data-theme="dark"] [class*="bg-white/"] {
+  background-color: var(--card) !important;
+}
+
+:root[data-theme="dark"] .bg-gray-50,
+:root[data-theme="dark"] [class*="bg-gray-50/"],
+:root[data-theme="dark"] [class*="bg-[#f7f7f5]"],
+:root[data-theme="dark"] [class*="bg-[#f8f7f4]"] {
+  background-color: var(--background) !important;
+}
+
+:root[data-theme="dark"] .bg-gray-100,
+:root[data-theme="dark"] [class*="bg-gray-100/"] {
+  background-color: #223149 !important;
+}
+
+:root[data-theme="dark"] .bg-gray-200,
+:root[data-theme="dark"] [class*="bg-gray-200/"] {
+  background-color: #34435a !important;
+}
+
+/* Correct hard-coded light calendar surfaces. */
+:root[data-theme="dark"] [class*="bg-[#fafaf9]"] {
+  background-color: #152238 !important;
+}
+
+/* Correct the light Profile header gradient. */
+:root[data-theme="dark"]
+  [class*="bg-gradient-to-b"][class*="from-gray-50"][class*="to-white"] {
+  background-image:
+    linear-gradient(
+      to bottom,
+      #1b2a42,
+      #152238
+    ) !important;
+}
+
+/* Keep selected display options readable in Dark mode. */
+:root[data-theme="dark"] .bg-blue-50 {
+  background-color: #18345d !important;
+}
+
+:root[data-theme="dark"] .text-black,
+:root[data-theme="dark"] .text-gray-900,
+:root[data-theme="dark"] .text-gray-800,
+:root[data-theme="dark"] .text-gray-700 {
+  color: #eef3fb !important;
+}
+
+:root[data-theme="dark"] .text-gray-600,
+:root[data-theme="dark"] .text-gray-500 {
+  color: #b5c0d0 !important;
+}
+
+:root[data-theme="dark"] .text-gray-400 {
+  color: #8f9db1 !important;
+}
+
+:root[data-theme="dark"] .border-white {
+  border-color: #eef3fb !important;
+}
+
+:root[data-theme="dark"] .border-gray-100,
+:root[data-theme="dark"] .border-gray-200,
+:root[data-theme="dark"] .border-gray-300,
+:root[data-theme="dark"] [class*="border-gray-100/"],
+:root[data-theme="dark"] [class*="border-gray-200/"],
+:root[data-theme="dark"] [class*="border-gray-300/"] {
+  border-color: var(--border) !important;
+}
+
+:root[data-theme="dark"] .shadow-sm,
+:root[data-theme="dark"] .shadow-md,
+:root[data-theme="dark"] .shadow-lg {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.24) !important;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select {
+  color: var(--foreground);
+  background-color: var(--input-background);
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] input:focus,
+:root[data-theme="dark"] textarea:focus,
+:root[data-theme="dark"] select:focus {
+  box-shadow:
+    0 0 0 2px rgba(238, 243, 251, 0.15);
+}
+
+:root[data-theme="dark"] .hover\:bg-gray-50:hover,
+:root[data-theme="dark"] .hover\:bg-gray-100:hover {
+  background-color: #223149 !important;
+}
+
+:root[data-theme="dark"] .hover\:text-black:hover {
+  color: #ffffff !important;
 }

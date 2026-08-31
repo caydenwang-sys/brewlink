@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { openExternalUrl } from '@/lib/native/openExternalUrl'
 import { useRouter } from 'next/navigation'
 import BottomNav from '../components/BottomNav'
 
@@ -896,10 +897,8 @@ export default function ConnectionsPage() {
       return
     }
 
-    window.open(
-      data.signedUrl,
-      '_blank',
-      'noopener,noreferrer'
+    await openExternalUrl(
+      data.signedUrl
     )
   }
 
@@ -1307,7 +1306,7 @@ export default function ConnectionsPage() {
                             }
 
                             router.push(
-                              `/chats/${matchId}`
+                              `/chats/conversation?matchId=${matchId}`
                             )
                           }}
                           className="w-full rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 sm:w-auto"

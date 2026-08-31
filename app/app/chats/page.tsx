@@ -777,7 +777,7 @@ export default function ChatsPage() {
                     type="button"
                     onClick={() => {
                       router.push(
-                        `/chats/${conversation.matchId}`
+                        `/chats/conversation?matchId=${conversation.matchId}`
                       )
                     }}
                     className={`flex w-full items-center gap-4 p-5 text-left transition hover:bg-gray-50 ${

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import BottomNav from '../components/BottomNav'
 import {
   useRouter,
   useSearchParams,
@@ -1593,7 +1594,7 @@ function CoffeeChatsPageContent() {
                             type="button"
                             onClick={() =>
                               router.push(
-                                `/chats/${chat.match_id}`
+                                `/chats/conversation?matchId=${chat.match_id}`
                               )
                             }
                             className="flex-1 rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 sm:flex-none"
@@ -1895,7 +1896,7 @@ function CoffeeChatsPageContent() {
                   type="button"
                   onClick={() =>
                     router.push(
-                      `/chats/${selectedChat.match_id}`
+                      `/chats/conversation?matchId=${selectedChat.match_id}`
                     )
                   }
                   className="flex-1 rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
@@ -1925,78 +1926,7 @@ function CoffeeChatsPageContent() {
 
       {/* BOTTOM NAV */}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white">
-
-        <div className="mx-auto flex max-w-3xl justify-around px-3 py-4">
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/dashboard')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              🏠
-            </span>
-            Home
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/discover')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              ✨
-            </span>
-            Discover
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/connections')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👥
-            </span>
-            Connections
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/chats')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              💬
-            </span>
-            Chats
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push('/profile')
-            }
-            className="flex flex-col items-center gap-1 px-3 text-xs text-gray-500 transition hover:text-black"
-          >
-            <span className="text-base">
-              👤
-            </span>
-            Profile
-          </button>
-
-        </div>
-
-      </nav>
+      <BottomNav />
 
     </main>
   )

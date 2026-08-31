@@ -10,8 +10,8 @@ import {
   createClient,
 } from '@/lib/supabase/client'
 import {
-  useParams,
   useRouter,
+  useSearchParams,
 } from 'next/navigation'
 
 type Profile = {
@@ -32,10 +32,11 @@ type Message = {
 export default function ConversationPage() {
   const router = useRouter()
 
-  const params =
-    useParams<{ matchId: string }>()
+  const searchParams =
+    useSearchParams()
 
-  const matchId = Number(params.matchId)
+  const matchId =
+    Number(searchParams.get('matchId'))
 
   // ============================================
   // STATE
@@ -158,6 +159,15 @@ export default function ConversationPage() {
     }
 
     // ============================================
+    // REQUIRE ACTIVE MATCH
+    // ============================================
+
+    if (match.status !== 'active') {
+      router.replace('/chats')
+      return
+    }
+
+    // ============================================
     // FIND OTHER USER
     // ============================================
 
@@ -165,6 +175,43 @@ export default function ConversationPage() {
       match.user_1_id === user.id
         ? match.user_2_id
         : match.user_1_id
+
+    // ============================================
+    // CHECK FOR BLOCK
+    // ============================================
+
+    const {
+      data: blockedRelationship,
+      error: blockedRelationshipError,
+    } = await supabase
+      .from('blocked_users')
+      .select(`
+        blocker_id,
+        blocked_id
+      `)
+      .or(
+        `and(blocker_id.eq.${user.id},blocked_id.eq.${otherUserId}),and(blocker_id.eq.${otherUserId},blocked_id.eq.${user.id})`
+      )
+      .maybeSingle()
+
+    if (blockedRelationshipError) {
+      console.error(
+        'Could not check blocked users:',
+        blockedRelationshipError
+      )
+
+      setError(
+        'Could not verify this conversation.'
+      )
+
+      setLoading(false)
+      return
+    }
+
+    if (blockedRelationship) {
+      router.replace('/chats')
+      return
+    }
 
     const {
       data: profile,
@@ -621,6 +668,67 @@ export default function ConversationPage() {
 
     setSending(true)
     setError('')
+
+    // ============================================
+    // VERIFY MATCH IS STILL ACTIVE
+    // ============================================
+
+    const {
+      data: activeMatch,
+      error: activeMatchError,
+    } = await supabase
+      .from('matches')
+      .select(`
+        id,
+        user_1_id,
+        user_2_id,
+        status
+      `)
+      .eq('id', matchId)
+      .maybeSingle()
+
+    if (
+      activeMatchError ||
+      !activeMatch ||
+      activeMatch.status !== 'active'
+    ) {
+      setSending(false)
+      router.replace('/chats')
+      return
+    }
+
+    const otherUserId =
+      activeMatch.user_1_id ===
+      currentUserId
+        ? activeMatch.user_2_id
+        : activeMatch.user_1_id
+
+    // ============================================
+    // VERIFY USERS ARE NOT BLOCKED
+    // ============================================
+
+    const {
+      data: blockedRelationship,
+      error: blockedRelationshipError,
+    } = await supabase
+      .from('blocked_users')
+      .select(`
+        blocker_id,
+        blocked_id
+      `)
+      .or(
+        `and(blocker_id.eq.${currentUserId},blocked_id.eq.${otherUserId}),and(blocker_id.eq.${otherUserId},blocked_id.eq.${currentUserId})`
+      )
+      .maybeSingle()
+
+    if (
+      blockedRelationshipError ||
+      blockedRelationship
+    ) {
+      setSending(false)
+      router.replace('/chats')
+      return
+    }
 
     const {
       data: insertedMessage,
