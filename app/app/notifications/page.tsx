@@ -592,7 +592,7 @@ export default function NotificationsPage() {
               </h1>
 
               <p className="mt-2 text-sm text-gray-500">
-                Stay up to date with your BrewLink
+                Stay up to date with your Brework
                 activity.
               </p>
 
@@ -661,7 +661,7 @@ export default function NotificationsPage() {
               </h2>
 
               <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-gray-500">
-                When something happens on BrewLink,
+                When something happens on Brework,
                 you'll see it here.
               </p>
 

@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BrewLink",
+  title: "Brework",
   description: "Connect with students through meaningful conversations.",
 };
 

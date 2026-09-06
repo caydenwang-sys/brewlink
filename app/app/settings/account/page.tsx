@@ -112,7 +112,7 @@ export default function AccountSettingsPage() {
             onClick={() => router.push('/settings')}
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -137,7 +137,7 @@ export default function AccountSettingsPage() {
         </h1>
 
         <p className="mt-3 text-gray-500">
-          Manage your BrewLink login and account security.
+          Manage your Brework login and account security.
         </p>
 
         {error && (
@@ -159,7 +159,7 @@ export default function AccountSettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            The email associated with your BrewLink account.
+            The email associated with your Brework account.
           </p>
 
           <div className="mt-5 rounded-2xl bg-gray-50 px-4 py-4">
@@ -177,7 +177,7 @@ export default function AccountSettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Choose a new password for your BrewLink account.
+            Choose a new password for your Brework account.
           </p>
 
           <div className="mt-6 space-y-4">
@@ -236,7 +236,7 @@ export default function AccountSettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Sign out of your BrewLink account on this device.
+            Sign out of your Brework account on this device.
           </p>
 
           <button

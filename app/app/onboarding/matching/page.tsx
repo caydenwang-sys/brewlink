@@ -285,7 +285,7 @@ export default function MatchingOnboardingPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
@@ -378,7 +378,7 @@ export default function MatchingOnboardingPage() {
           </h1>
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
-            Tell BrewLink what kinds of people and connections you want to prioritize.
+            Tell Brework what kinds of people and connections you want to prioritize.
             You can select any combination, or leave everything open.
           </p>
 
@@ -403,7 +403,7 @@ export default function MatchingOnboardingPage() {
           <div>
 
             <p className="text-sm font-semibold text-gray-900">
-              Who should BrewLink prioritize?
+              Who should Brework prioritize?
             </p>
 
             <p className="mt-1 text-xs leading-relaxed text-gray-400">
@@ -540,7 +540,7 @@ export default function MatchingOnboardingPage() {
             </p>
 
             <p className="mt-1 text-xs leading-relaxed text-gray-400">
-              Choose how much BrewLink should favor compatibility versus variety.
+              Choose how much Brework should favor compatibility versus variety.
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -745,7 +745,7 @@ export default function MatchingOnboardingPage() {
           </p>
 
           <p className="mt-1 text-sm leading-relaxed text-gray-500">
-            Add the days and times you are generally available for BrewLink conversations.
+            Add the days and times you are generally available for Brework conversations.
           </p>
 
         </section>

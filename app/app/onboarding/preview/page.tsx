@@ -702,7 +702,7 @@ export default function PreviewOnboardingPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <span className="rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white">
@@ -791,7 +791,7 @@ export default function PreviewOnboardingPage() {
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-            Preview your BrewLink profile
+            Preview your Brework profile
           </h1>
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
@@ -1201,7 +1201,7 @@ export default function PreviewOnboardingPage() {
           </div>
 
           <p className="mt-4 text-center text-xs leading-relaxed text-gray-400">
-            You can edit every section later from your BrewLink Profile page.
+            You can edit every section later from your Brework Profile page.
           </p>
 
         </section>

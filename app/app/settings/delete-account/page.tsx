@@ -26,7 +26,7 @@ export default function DeleteAccountPage() {
     }
 
     const confirmed = window.confirm(
-      'This will permanently delete your BrewLink account and all associated data. This cannot be undone. Continue?'
+      'This will permanently delete your Brework account and all associated data. This cannot be undone. Continue?'
     )
 
     if (!confirmed) {
@@ -101,7 +101,7 @@ export default function DeleteAccountPage() {
             onClick={() => router.push('/settings')}
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -128,7 +128,7 @@ export default function DeleteAccountPage() {
         </h1>
 
         <p className="mt-3 max-w-xl leading-relaxed text-gray-500">
-          Permanently delete your BrewLink account and all associated
+          Permanently delete your Brework account and all associated
           profile, connection, message, scheduling, and preference data.
         </p>
 
@@ -145,9 +145,9 @@ export default function DeleteAccountPage() {
           </h2>
 
           <p className="mt-2 text-sm leading-relaxed text-gray-500">
-            Deleting your account permanently removes your BrewLink
+            Deleting your account permanently removes your Brework
             account and related data. You will need to create a new
-            account if you want to use BrewLink again.
+            account if you want to use Brework again.
           </p>
 
           <div className="mt-6">

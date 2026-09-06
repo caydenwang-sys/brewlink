@@ -832,7 +832,7 @@ function CoffeeChatsPageContent() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -862,7 +862,7 @@ function CoffeeChatsPageContent() {
             <div>
 
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-                BrewLink
+                Brework
               </p>
 
               <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">

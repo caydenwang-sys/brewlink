@@ -4331,7 +4331,7 @@ export default function ProfilePage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -4359,7 +4359,7 @@ export default function ProfilePage() {
         <section className="mb-8">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Your BrewLink
+            Your Brework
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
@@ -4367,7 +4367,7 @@ export default function ProfilePage() {
           </h1>
 
           <p className="mt-3 max-w-xl leading-relaxed text-gray-500">
-            Build a profile that helps BrewLink
+            Build a profile that helps Brework
             find the right people, opportunities,
             and conversations for you.
           </p>
@@ -4510,7 +4510,7 @@ export default function ProfilePage() {
 
             <p className="mt-1 text-sm leading-relaxed text-gray-500">
               Your core profile information.
-              BrewLink uses this to introduce
+              Brework uses this to introduce
               you to other students.
             </p>
 
@@ -4818,7 +4818,7 @@ export default function ProfilePage() {
 
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-gray-500">
                 Add as few or as many interests as you want.
-                These directly improve BrewLink search and
+                These directly improve Brework search and
                 matching.
               </p>
 
@@ -5221,7 +5221,7 @@ export default function ProfilePage() {
 
                 <p className="mt-1 text-sm leading-relaxed text-gray-500">
                   Search below or create an organization if
-                  it is not already on BrewLink.
+                  it is not already on Brework.
                 </p>
 
               </div>
@@ -5570,7 +5570,7 @@ export default function ProfilePage() {
 
               <p className="mt-1 text-sm leading-relaxed text-gray-500">
                 This section is optional. Add roles that help other
-                BrewLink users understand your background.
+                Brework users understand your background.
               </p>
 
             </div>
@@ -6187,7 +6187,7 @@ export default function ProfilePage() {
                         event.target.value
                       )
                     }
-                    placeholder="e.g. BrewLink"
+                    placeholder="e.g. Brework"
                     maxLength={120}
                     className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
                   />
@@ -6298,7 +6298,7 @@ export default function ProfilePage() {
 
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-gray-500">
                 Choose as many or as few preferences as you want.
-                BrewLink uses these to personalize discovery and ranking.
+                Brework uses these to personalize discovery and ranking.
               </p>
 
             </div>
@@ -6330,7 +6330,7 @@ export default function ProfilePage() {
               <div>
 
                 <p className="text-sm font-semibold text-gray-900">
-                  Who should BrewLink prioritize?
+                  Who should Brework prioritize?
                 </p>
 
                 <p className="mt-1 text-xs leading-relaxed text-gray-400">
@@ -6556,7 +6556,7 @@ export default function ProfilePage() {
                 </label>
 
                 <p className="mt-1 text-xs leading-relaxed text-gray-400">
-                  This will be used by BrewLink&apos;s matching flow later.
+                  This will be used by Brework&apos;s matching flow later.
                 </p>
 
                 <select
@@ -6647,7 +6647,7 @@ export default function ProfilePage() {
 
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-gray-500">
                 Add as many weekly time windows as you need.
-                BrewLink uses these to find times that overlap with
+                Brework uses these to find times that overlap with
                 other students.
               </p>
 
@@ -6711,7 +6711,7 @@ export default function ProfilePage() {
 
               <p className="mt-1 text-sm leading-relaxed text-gray-500">
                 This is optional. Add your usual free times so
-                BrewLink can make scheduling easier later.
+                Brework can make scheduling easier later.
               </p>
 
             </div>
@@ -7226,7 +7226,7 @@ export default function ProfilePage() {
               />
 
               <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                This is separate from your BrewLink login email.
+                This is separate from your Brework login email.
               </p>
 
             </div>
@@ -7263,7 +7263,7 @@ export default function ProfilePage() {
               </select>
 
               <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                Connections only is recommended. BrewLink will use this
+                Connections only is recommended. Brework will use this
                 setting when other-user profile pages are enabled.
               </p>
 
@@ -7324,7 +7324,7 @@ export default function ProfilePage() {
                       </p>
 
                       <p className="mt-1 text-xs text-gray-400">
-                        Private BrewLink resume
+                        Private Brework resume
                       </p>
 
                     </div>
@@ -7461,7 +7461,7 @@ export default function ProfilePage() {
                       : 'text-gray-400'
                   }`}>
                     {isDiscoverable
-                      ? 'Other BrewLink students can discover your profile.'
+                      ? 'Other Brework students can discover your profile.'
                       : 'You will be hidden from new Search and Discovery results. Existing connections are not removed.'}
                   </p>
 
@@ -7678,7 +7678,7 @@ export default function ProfilePage() {
 
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-gray-500">
                 Preview your profile using the same information other
-                BrewLink students see in Search and Discovery.
+                Brework students see in Search and Discovery.
               </p>
 
             </div>
@@ -7739,7 +7739,7 @@ export default function ProfilePage() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Manage your BrewLink session.
+            Manage your Brework session.
           </p>
 
           <button
@@ -7792,7 +7792,7 @@ export default function ProfilePage() {
                 </p>
 
                 <p className="mt-0.5 text-sm font-semibold text-gray-700">
-                  BrewLink
+                  Brework
                 </p>
 
               </div>

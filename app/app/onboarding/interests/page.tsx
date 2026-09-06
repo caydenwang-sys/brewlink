@@ -778,7 +778,7 @@ export default function InterestsPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
@@ -880,7 +880,7 @@ export default function InterestsPage() {
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
             Choose none, one, or as many as you want.
-            BrewLink uses these to improve Search,
+            Brework uses these to improve Search,
             Discovery, and compatibility ranking.
           </p>
 

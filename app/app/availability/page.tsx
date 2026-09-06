@@ -490,7 +490,7 @@ export default function AvailabilityPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -516,7 +516,7 @@ export default function AvailabilityPage() {
         <section className="mb-10">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            BrewLink
+            Brework
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
@@ -525,7 +525,7 @@ export default function AvailabilityPage() {
 
           <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-500">
             Add the times you're usually available
-            for coffee chats. BrewLink will use these
+            for coffee chats. Brework will use these
             times to find matches that work for both
             people.
           </p>

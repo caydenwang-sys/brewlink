@@ -577,7 +577,7 @@ export default function AvailabilityOnboardingPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
@@ -670,7 +670,7 @@ export default function AvailabilityOnboardingPage() {
           </h1>
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
-            Add your usual weekly availability so BrewLink can make scheduling easier.
+            Add your usual weekly availability so Brework can make scheduling easier.
             You can add multiple time windows on the same day, or skip this step.
           </p>
 

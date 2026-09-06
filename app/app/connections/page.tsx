@@ -951,7 +951,7 @@ export default function ConnectionsPage() {
             onClick={() => router.push('/dashboard')}
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </button>
 
           <button

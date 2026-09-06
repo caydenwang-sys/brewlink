@@ -79,7 +79,7 @@ export default function SignupPage() {
             href="/"
             className="text-3xl font-bold"
           >
-            BrewLink
+            Brework
           </Link>
 
           <h1 className="mt-8 text-3xl font-bold">
@@ -202,7 +202,7 @@ export default function SignupPage() {
             href="/"
             className="text-sm text-gray-500 hover:text-black"
           >
-            ← Back to BrewLink
+            ← Back to Brework
           </Link>
         </div>
 

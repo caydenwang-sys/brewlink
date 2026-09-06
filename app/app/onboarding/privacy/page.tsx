@@ -233,7 +233,7 @@ export default function PrivacyOnboardingPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
@@ -384,7 +384,7 @@ export default function PrivacyOnboardingPage() {
                       : 'text-gray-400'
                   }`}>
                     {isDiscoverable
-                      ? 'Other BrewLink students can discover your profile.'
+                      ? 'Other Brework students can discover your profile.'
                       : 'You will be hidden from new Search and Discovery results. Existing connections are not removed.'}
                   </p>
 
@@ -612,7 +612,7 @@ export default function PrivacyOnboardingPage() {
           </p>
 
           <p className="mt-1 text-sm leading-relaxed text-gray-500">
-            Review your BrewLink profile exactly as other students will see it before finishing onboarding.
+            Review your Brework profile exactly as other students will see it before finishing onboarding.
           </p>
 
         </section>

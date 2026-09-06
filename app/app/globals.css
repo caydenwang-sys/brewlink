@@ -113,7 +113,7 @@ button {
   font-family: inherit;
 }
 
-/* App-wide dark-mode support for existing BrewLink pages. */
+/* App-wide dark-mode support for existing Brework pages. */
 :root[data-theme="dark"] body,
 :root[data-theme="dark"] main {
   background-color: var(--background);

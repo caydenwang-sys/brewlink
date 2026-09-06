@@ -933,7 +933,7 @@ export default function ConversationPage() {
             </h1>
 
             <p className="text-xs text-gray-400">
-              BrewLink connection
+              Brework connection
             </p>
 
           </div>
@@ -967,7 +967,7 @@ export default function ConversationPage() {
               <p className="mt-2 max-w-sm text-sm leading-relaxed text-gray-500">
                 Send {firstName} a message and
                 start getting to know your
-                BrewLink connection.
+                Brework connection.
               </p>
 
             </div>

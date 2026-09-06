@@ -598,7 +598,7 @@ export default function OnboardingPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
@@ -691,7 +691,7 @@ export default function OnboardingPage() {
         <section className="mb-8">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Welcome to BrewLink
+            Welcome to Brework
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
@@ -702,7 +702,7 @@ export default function OnboardingPage() {
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
             {currentStep === 1
-              ? 'Start with your identity and academic information. If you return later, BrewLink will preload what you already saved.'
+              ? 'Start with your identity and academic information. If you return later, Brework will preload what you already saved.'
               : 'Add a primary career direction and a short bio. Both are optional and can be changed later.'}
           </p>
 
@@ -771,7 +771,7 @@ export default function OnboardingPage() {
 
             <p className="mt-1 text-sm leading-relaxed text-gray-500">
               These fields create the foundation
-              of your BrewLink profile.
+              of your Brework profile.
             </p>
 
           </div>
@@ -1071,7 +1071,7 @@ export default function OnboardingPage() {
 
             <p className="text-center text-xs leading-relaxed text-gray-400">
               Your progress is saved to your
-              BrewLink profile as you continue.
+              Brework profile as you continue.
             </p>
 
           </div>
@@ -1097,7 +1097,7 @@ export default function OnboardingPage() {
               </h2>
 
               <p className="mt-1 text-sm leading-relaxed text-gray-500">
-                Give BrewLink a little more context about what you&apos;re aiming for and what you&apos;re interested in.
+                Give Brework a little more context about what you&apos;re aiming for and what you&apos;re interested in.
               </p>
 
             </div>

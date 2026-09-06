@@ -151,7 +151,7 @@ export default function PreferencesPage() {
           </h1>
 
           <p className="mt-3 text-gray-600">
-            Tell BrewLink what kinds of connections you're
+            Tell Brework what kinds of connections you're
             looking for.
           </p>
 
@@ -231,7 +231,7 @@ export default function PreferencesPage() {
           </h2>
 
           <p className="mb-4 text-sm text-gray-500">
-            This controls how frequently BrewLink creates
+            This controls how frequently Brework creates
             new introductions.
           </p>
 

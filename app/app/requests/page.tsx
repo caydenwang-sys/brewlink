@@ -529,7 +529,7 @@ export default function RequestsPage() {
 
     const name =
       `${firstName} ${lastName}`.trim() ||
-      'BrewLink connection'
+      'Brework connection'
 
     const major =
       person?.major?.trim() ||
@@ -721,7 +721,7 @@ export default function RequestsPage() {
 
           <p className="mt-2 text-sm text-gray-500">
             Review requests from your
-            BrewLink connections.
+            Brework connections.
           </p>
 
         </div>

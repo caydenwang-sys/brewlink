@@ -11,7 +11,7 @@ export default function SupportPage() {
             href="/"
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </Link>
 
           <Link
@@ -31,12 +31,12 @@ export default function SupportPage() {
         </p>
 
         <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-          BrewLink Support
+          Brework Support
         </h1>
 
         <p className="mt-4 max-w-2xl leading-relaxed text-gray-600">
           Get help with your account, profile, connections, messages,
-          coffee chats, privacy settings, or other BrewLink features.
+          coffee chats, privacy settings, or other Brework features.
         </p>
 
         <section className="mt-10 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
@@ -52,7 +52,7 @@ export default function SupportPage() {
           </p>
 
           <a
-            href="mailto:caydenwang@gmail.com?subject=BrewLink%20Support"
+            href="mailto:caydenwang@gmail.com?subject=Brework%20Support"
             className="mt-5 inline-flex rounded-xl bg-[#10233f] px-5 py-3 font-semibold text-white transition hover:opacity-90"
           >
             Email caydenwang@gmail.com
@@ -84,7 +84,7 @@ export default function SupportPage() {
               You can update your profile, discoverability, contact
               visibility, matching preferences, availability, and
               notification settings from Profile and Settings inside
-              BrewLink.
+              Brework.
             </p>
           </section>
 
@@ -97,7 +97,7 @@ export default function SupportPage() {
               Connection requests appear in Connections. Messaging is
               available after a connection is accepted and an active
               match is created. If information appears outdated,
-              close and reopen BrewLink and check your network
+              close and reopen Brework and check your network
               connection.
             </p>
           </section>
@@ -108,10 +108,10 @@ export default function SupportPage() {
             </h2>
 
             <p className="mt-3 leading-relaxed text-gray-600">
-              BrewLink uses the availability entered by both
+              Brework uses the availability entered by both
               participants to identify possible meeting times.
               Scheduled, completed, and cancelled meetings can be
-              reviewed through BrewLink’s scheduling features.
+              reviewed through Brework’s scheduling features.
             </p>
           </section>
 
@@ -121,7 +121,7 @@ export default function SupportPage() {
             </h2>
 
             <p className="mt-3 leading-relaxed text-gray-600">
-              You can permanently delete your BrewLink account from
+              You can permanently delete your Brework account from
               within the app:
             </p>
 
@@ -150,7 +150,7 @@ export default function SupportPage() {
             href="/"
             className="font-semibold text-gray-500 transition hover:text-black"
           >
-            Return to BrewLink
+            Return to Brework
           </Link>
 
         </div>

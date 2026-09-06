@@ -1522,7 +1522,7 @@ export default function DashboardPage() {
       )
 
     if (!partner) {
-      return 'BrewLink match'
+      return 'Brework match'
     }
 
     const fullName =
@@ -1533,7 +1533,7 @@ export default function DashboardPage() {
 
     return (
       fullName ||
-      'BrewLink match'
+      'Brework match'
     )
   }
 
@@ -1735,7 +1735,7 @@ export default function DashboardPage() {
           </div>
 
           <p className="mt-4 text-sm font-medium text-gray-500">
-            Loading BrewLink...
+            Loading Brework...
           </p>
 
         </div>
@@ -1797,7 +1797,7 @@ export default function DashboardPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <div className="flex items-center gap-2">
@@ -1862,7 +1862,7 @@ export default function DashboardPage() {
         <section className="mb-10">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            Your BrewLink
+            Your Brework
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
@@ -2109,7 +2109,7 @@ export default function DashboardPage() {
                       </h2>
 
                       <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-500">
-                        Give BrewLink a quick signal so we can make your future matches better.
+                        Give Brework a quick signal so we can make your future matches better.
                       </p>
 
                     </div>
@@ -2285,7 +2285,7 @@ export default function DashboardPage() {
                       </p>
 
                       <p className="mt-1 text-xs text-gray-400">
-                        Your answer is private and only used to improve BrewLink.
+                        Your answer is private and only used to improve Brework.
                       </p>
 
                       <div className="mt-4 grid grid-cols-3 gap-3">
@@ -2767,7 +2767,7 @@ export default function DashboardPage() {
           <div className="mb-4">
 
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-              Explore BrewLink
+              Explore Brework
             </p>
 
             <h2 className="mt-1 text-2xl font-bold tracking-tight">
@@ -2906,7 +2906,7 @@ export default function DashboardPage() {
                   </div>
 
                   <p className="mt-1 text-sm text-gray-500">
-                    Stay up to date with BrewLink.
+                    Stay up to date with Brework.
                   </p>
 
                 </div>

@@ -126,7 +126,7 @@ export default function PrivacySettingsPage() {
             onClick={() => router.push('/settings')}
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -151,7 +151,7 @@ export default function PrivacySettingsPage() {
         </h1>
 
         <p className="mt-3 max-w-xl text-gray-500">
-          Control how other students can discover and view your BrewLink profile.
+          Control how other students can discover and view your Brework profile.
         </p>
 
         {error && (

@@ -11,7 +11,7 @@ export default function PrivacyPolicyPage() {
             href="/"
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </Link>
 
           <Link
@@ -46,15 +46,15 @@ export default function PrivacyPolicyPage() {
             </h2>
 
             <p className="mt-3">
-              BrewLink helps students discover one another, build
+              Brework helps students discover one another, build
               professional and social connections, exchange messages,
               and schedule coffee chats. This Privacy Policy explains
-              what information BrewLink collects, why it is used, how
+              what information Brework collects, why it is used, how
               it may be shared, and the choices available to you.
             </p>
 
             <p className="mt-3">
-              By using BrewLink, you acknowledge the practices
+              By using Brework, you acknowledge the practices
               described in this Privacy Policy.
             </p>
           </section>
@@ -77,7 +77,7 @@ export default function PrivacyPolicyPage() {
                   identifier, authentication information, and account
                   creation date. Passwords are handled by our
                   authentication provider and are not displayed to
-                  other BrewLink users.
+                  other Brework users.
                 </p>
               </div>
 
@@ -113,7 +113,7 @@ export default function PrivacyPolicyPage() {
                 </h3>
 
                 <p className="mt-1">
-                  We store messages you send through BrewLink,
+                  We store messages you send through Brework,
                   meeting proposals, scheduled meetings, locations
                   you enter, notification status, and related
                   timestamps so these features can operate.
@@ -126,7 +126,7 @@ export default function PrivacyPolicyPage() {
                 </h3>
 
                 <p className="mt-1">
-                  BrewLink and its service providers may process
+                  Brework and its service providers may process
                   limited technical information needed to operate and
                   secure the service, such as session information,
                   application events, device or browser information,
@@ -153,7 +153,7 @@ export default function PrivacyPolicyPage() {
               <li>Process connections, messages, notifications, and meetings.</li>
               <li>Store profile photos, resumes, and other content you upload.</li>
               <li>Maintain security, prevent abuse, and troubleshoot problems.</li>
-              <li>Improve BrewLink’s usability, reliability, and features.</li>
+              <li>Improve Brework’s usability, reliability, and features.</li>
               <li>Comply with applicable legal obligations.</li>
             </ul>
           </section>
@@ -164,30 +164,30 @@ export default function PrivacyPolicyPage() {
             </h2>
 
             <p className="mt-3">
-              Depending on your settings and how you use BrewLink,
+              Depending on your settings and how you use Brework,
               profile information may be visible to other
               authenticated users. Contact details, links, and
               resumes are displayed according to the visibility
-              choices available in BrewLink.
+              choices available in Brework.
             </p>
 
             <p className="mt-3">
-              We use service providers to operate BrewLink, including
+              We use service providers to operate Brework, including
               Supabase for authentication, database, storage, and
               realtime features, and Vercel for website and server
               hosting. These providers process information on
-              BrewLink’s behalf to deliver their services.
+              Brework’s behalf to deliver their services.
             </p>
 
             <p className="mt-3">
               We may disclose information when reasonably necessary
               to comply with law, protect users, investigate abuse or
-              security incidents, or protect BrewLink’s rights and
+              security incidents, or protect Brework’s rights and
               safety.
             </p>
 
             <p className="mt-3">
-              BrewLink does not sell your personal information or use
+              Brework does not sell your personal information or use
               it for third-party targeted advertising.
             </p>
           </section>
@@ -199,7 +199,7 @@ export default function PrivacyPolicyPage() {
 
             <p className="mt-3">
               We retain information while your account is active and
-              as reasonably necessary to provide BrewLink, maintain
+              as reasonably necessary to provide Brework, maintain
               security, resolve disputes, and comply with legal
               obligations. Retention periods may vary depending on
               the type of information and why it is maintained.
@@ -219,14 +219,14 @@ export default function PrivacyPolicyPage() {
             </h2>
 
             <p className="mt-3">
-              BrewLink provides controls that may allow you to edit
+              Brework provides controls that may allow you to edit
               your profile, manage discoverability, control certain
               profile visibility, update matching preferences, remove
               uploaded content, block users, and manage notifications.
             </p>
 
             <p className="mt-3">
-              You can delete your account from within BrewLink by
+              You can delete your account from within Brework by
               opening:
             </p>
 
@@ -260,9 +260,9 @@ export default function PrivacyPolicyPage() {
             </h2>
 
             <p className="mt-3">
-              BrewLink is intended for college students and is not
+              Brework is intended for college students and is not
               directed to children under 13. If you believe a child
-              has provided personal information through BrewLink,
+              has provided personal information through Brework,
               please contact us.
             </p>
           </section>
@@ -273,7 +273,7 @@ export default function PrivacyPolicyPage() {
             </h2>
 
             <p className="mt-3">
-              We may update this Privacy Policy as BrewLink evolves.
+              We may update this Privacy Policy as Brework evolves.
               The updated version will be posted on this page with a
               revised “Last updated” date.
             </p>
@@ -304,7 +304,7 @@ export default function PrivacyPolicyPage() {
             href="/support"
             className="font-semibold text-blue-600 underline underline-offset-2"
           >
-            Visit BrewLink Support
+            Visit Brework Support
           </Link>
         </div>
 

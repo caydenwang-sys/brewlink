@@ -205,7 +205,7 @@ export default function MatchingSettingsPage() {
             onClick={() => router.push('/settings')}
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -261,7 +261,7 @@ export default function MatchingSettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Choose the kinds of people BrewLink should prioritize.
+            Choose the kinds of people Brework should prioritize.
           </p>
 
           <div className="mt-6 space-y-3">
@@ -448,7 +448,7 @@ export default function MatchingSettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Choose how often you want BrewLink to create new introductions.
+            Choose how often you want Brework to create new introductions.
           </p>
 
           <div className="mt-5 grid grid-cols-3 gap-3">
@@ -495,7 +495,7 @@ export default function MatchingSettingsPage() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Choose whether BrewLink should favor similarity or new perspectives.
+            Choose whether Brework should favor similarity or new perspectives.
           </p>
 
           <div className="mt-5 space-y-3">

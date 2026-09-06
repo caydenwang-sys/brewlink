@@ -573,7 +573,7 @@ export default function DiscoverPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <button

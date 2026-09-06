@@ -93,7 +93,7 @@ function getNextDateForDay(dayOfWeek: number) {
   // ...
   // Saturday = 6
   //
-  // BrewLink:
+  // Brework:
   // Monday = 1
   // ...
   // Sunday = 7
@@ -1263,7 +1263,7 @@ function SchedulePageContent() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -1289,7 +1289,7 @@ function SchedulePageContent() {
         <section className="mb-10">
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-            BrewLink
+            Brework
           </p>
 
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
@@ -1763,7 +1763,7 @@ function SchedulePageContent() {
                               ? getProfileName(
                                   meetingMatch
                                 )
-                              : 'BrewLink match'}
+                              : 'Brework match'}
                           </p>
 
                           <p className="mt-2 font-medium">

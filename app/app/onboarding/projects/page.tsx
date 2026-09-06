@@ -422,7 +422,7 @@ export default function ProjectsOnboardingPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
@@ -728,7 +728,7 @@ export default function ProjectsOnboardingPage() {
                       )
                       setError('')
                     }}
-                    placeholder="e.g. BrewLink"
+                    placeholder="e.g. Brework"
                     maxLength={120}
                     className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
                   />
@@ -870,7 +870,7 @@ export default function ProjectsOnboardingPage() {
           </p>
 
           <p className="mt-1 text-sm leading-relaxed text-gray-500">
-            Tell BrewLink what kinds of people and connections
+            Tell Brework what kinds of people and connections
             you want to prioritize.
           </p>
 

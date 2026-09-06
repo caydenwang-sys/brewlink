@@ -17,7 +17,7 @@ export default function SettingsPage() {
             onClick={() => router.push('/dashboard')}
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -46,7 +46,7 @@ export default function SettingsPage() {
           </h1>
 
           <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-500">
-            Manage your BrewLink account, profile, matching
+            Manage your Brework account, profile, matching
             preferences, availability, notifications, and privacy.
           </p>
 
@@ -95,7 +95,7 @@ export default function SettingsPage() {
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              Control how BrewLink finds people for you.
+              Control how Brework finds people for you.
             </p>
 
             <button
@@ -161,7 +161,7 @@ export default function SettingsPage() {
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              Choose which BrewLink activity you want to hear about.
+              Choose which Brework activity you want to hear about.
             </p>
 
             <button
@@ -194,7 +194,7 @@ export default function SettingsPage() {
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              Choose how BrewLink looks on this device.
+              Choose how Brework looks on this device.
             </p>
 
             <button
@@ -227,7 +227,7 @@ export default function SettingsPage() {
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              Control your visibility and safety on BrewLink.
+              Control your visibility and safety on Brework.
             </p>
 
             <button

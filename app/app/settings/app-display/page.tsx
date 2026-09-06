@@ -25,14 +25,14 @@ const displayOptions: {
     value: 'light',
     label: 'Light',
     description:
-      'Always use BrewLink’s light appearance.',
+      'Always use Brework’s light appearance.',
     icon: '☀️',
   },
   {
     value: 'dark',
     label: 'Dark',
     description:
-      'Always use BrewLink’s dark appearance.',
+      'Always use Brework’s dark appearance.',
     icon: '🌙',
   },
   {
@@ -194,7 +194,7 @@ export default function AppDisplayPage() {
           </h1>
 
           <p className="mt-3 max-w-xl leading-relaxed text-gray-500">
-            Select how BrewLink looks on this device. Your choice is saved automatically.
+            Select how Brework looks on this device. Your choice is saved automatically.
           </p>
         </section>
 

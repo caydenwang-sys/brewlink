@@ -131,7 +131,7 @@ export default function NotificationSettingsPage() {
             onClick={() => router.push('/settings')}
             className="text-xl font-bold tracking-tight"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -156,7 +156,7 @@ export default function NotificationSettingsPage() {
         </h1>
 
         <p className="mt-3 max-w-xl text-gray-500">
-          Choose which BrewLink activity should create notifications for you.
+          Choose which Brework activity should create notifications for you.
         </p>
 
         {error && (

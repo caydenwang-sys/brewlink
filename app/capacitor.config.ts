@@ -11,7 +11,7 @@ import {
 
 const config: CapacitorConfig = {
   appId: 'com.brewlink.app',
-  appName: 'BrewLink',
+  appName: 'Brework',
   webDir: 'out',
 
   plugins: {

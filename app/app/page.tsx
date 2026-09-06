@@ -54,7 +54,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-5 md:px-12">
         <div className="text-2xl font-bold">
-          BrewLink
+          Brework
         </div>
 
         <Link
@@ -85,7 +85,7 @@ export default function HomePage() {
 
           {/* Description */}
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-gray-600 md:text-xl">
-            BrewLink helps you discover UCSD students who share your
+            Brework helps you discover UCSD students who share your
             interests, career goals, projects, and ambitions.
           </p>
 

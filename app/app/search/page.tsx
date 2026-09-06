@@ -2724,7 +2724,7 @@ export default function SearchPage() {
           </div>
 
           <p className="mt-4 text-sm font-medium text-gray-500">
-            Preparing BrewLink search...
+            Preparing Brework search...
           </p>
 
         </div>
@@ -2753,7 +2753,7 @@ export default function SearchPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -2783,7 +2783,7 @@ export default function SearchPage() {
           </p>
 
           <h1 className="mt-2 break-words text-3xl font-bold tracking-tight sm:text-5xl">
-            Search BrewLink
+            Search Brework
           </h1>
 
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-gray-500">
@@ -3369,7 +3369,7 @@ export default function SearchPage() {
                   </h2>
 
                   <p className="mt-1 text-sm leading-relaxed text-gray-500">
-                    BrewLink finds students who match what
+                    Brework finds students who match what
                     you searched for, then uses your shared
                     interests, clubs, work experience, projects, and
                     profile compatibility to help rank the strongest results first.
@@ -3770,7 +3770,7 @@ export default function SearchPage() {
                   </p>
 
                   <p className="mt-0.5 text-sm font-semibold text-gray-700">
-                    BrewLink
+                    Brework
                   </p>
 
                 </div>

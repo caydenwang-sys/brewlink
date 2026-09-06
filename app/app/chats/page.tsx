@@ -644,7 +644,7 @@ export default function ChatsPage() {
             }
             className="text-xl font-bold tracking-tight transition hover:opacity-70"
           >
-            BrewLink
+            Brework
           </button>
 
           <button
@@ -674,7 +674,7 @@ export default function ChatsPage() {
             <div>
 
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">
-                BrewLink
+                Brework
               </p>
 
               <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
@@ -693,7 +693,7 @@ export default function ChatsPage() {
 
           <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-500">
             Continue your conversations with
-            your BrewLink connections.
+            your Brework connections.
           </p>
 
         </section>
