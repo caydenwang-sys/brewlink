@@ -144,6 +144,26 @@ export default function ConnectionsPage() {
     setRelationshipLoading,
   ] = useState(false)
 
+  const [reportAction, setReportAction] =
+    useState<{
+      person: Profile
+    } | null>(null)
+
+  const [reportReason, setReportReason] =
+    useState('')
+
+  const [reportDetails, setReportDetails] =
+    useState('')
+
+  const [reportLoading, setReportLoading] =
+    useState(false)
+
+  const [reportError, setReportError] =
+    useState('')
+
+  const [reportSubmitted, setReportSubmitted] =
+    useState(false)
+
   async function loadConnections() {
     setLoading(true)
     setError('')
@@ -540,6 +560,82 @@ export default function ConnectionsPage() {
         'brewlink:connection-change'
       )
     )
+  }
+
+  // ============================================
+  // REPORT USER
+  // ============================================
+
+  function openReportModal(person: Profile) {
+    setOpenMenuId(null)
+    setReportAction({ person })
+    setReportReason('')
+    setReportDetails('')
+    setReportError('')
+    setReportSubmitted(false)
+  }
+
+  function closeReportModal() {
+    if (reportLoading) {
+      return
+    }
+
+    setReportAction(null)
+    setReportReason('')
+    setReportDetails('')
+    setReportError('')
+    setReportSubmitted(false)
+  }
+
+  async function handleReportUser() {
+    if (
+      !reportAction ||
+      !reportReason ||
+      reportLoading
+    ) {
+      return
+    }
+
+    setReportLoading(true)
+    setReportError('')
+
+    const supabase = createClient()
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setReportLoading(false)
+      router.push('/login')
+      return
+    }
+
+    const { error: submitError } =
+      await supabase.from('reports').insert({
+        reporter_id: user.id,
+        reported_user_id:
+          reportAction.person.id,
+        report_type: 'profile',
+        reason: reportReason,
+        details:
+          reportDetails.trim() || null,
+        reported_content: getName(
+          reportAction.person
+        ),
+      })
+
+    if (submitError) {
+      setReportError(
+        `Could not submit report: ${submitError.message}`
+      )
+      setReportLoading(false)
+      return
+    }
+
+    setReportLoading(false)
+    setReportSubmitted(true)
   }
 
   function getName(person: Profile | null) {
@@ -1358,6 +1454,18 @@ export default function ConnectionsPage() {
 
                               <button
                                 type="button"
+                                onClick={() =>
+                                  openReportModal(
+                                    person
+                                  )
+                                }
+                                className="w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-amber-700 transition hover:bg-amber-50"
+                              >
+                                Report user
+                              </button>
+
+                              <button
+                                type="button"
                                 onClick={() => {
                                   setOpenMenuId(null)
 
@@ -1494,6 +1602,170 @@ export default function ConnectionsPage() {
               </button>
 
             </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ======================================== */}
+      {/* REPORT USER MODAL */}
+      {/* ======================================== */}
+
+      {reportAction && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5 backdrop-blur-sm">
+
+          <div className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl sm:p-7">
+
+            {reportSubmitted ? (
+
+              <>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-xl">
+                  ✓
+                </div>
+
+                <h2 className="mt-5 text-2xl font-bold">
+                  Report submitted
+                </h2>
+
+                <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                  Thank you. We&apos;ll review this report and take appropriate action.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={closeReportModal}
+                  className="mt-7 w-full rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90"
+                >
+                  Done
+                </button>
+
+              </>
+
+            ) : (
+
+              <>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-xl">
+                  ⚠️
+                </div>
+
+                <h2 className="mt-5 text-2xl font-bold">
+                  Report {getName(
+                    reportAction.person
+                  )}?
+                </h2>
+
+                <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                  Reports are confidential. Select the reason that best describes the issue.
+                </p>
+
+                <label className="mt-6 block text-sm font-semibold text-gray-700">
+                  Reason
+                </label>
+
+                <select
+                  value={reportReason}
+                  onChange={(event) =>
+                    setReportReason(
+                      event.target.value
+                    )
+                  }
+                  disabled={reportLoading}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black disabled:opacity-50"
+                >
+                  <option value="">
+                    Select a reason
+                  </option>
+                  <option value="harassment">
+                    Harassment or bullying
+                  </option>
+                  <option value="hate_speech">
+                    Hate speech
+                  </option>
+                  <option value="spam">
+                    Spam or scam
+                  </option>
+                  <option value="inappropriate_content">
+                    Inappropriate content
+                  </option>
+                  <option value="impersonation">
+                    Impersonation
+                  </option>
+                  <option value="safety_concern">
+                    Safety concern
+                  </option>
+                  <option value="other">
+                    Other
+                  </option>
+                </select>
+
+                <label className="mt-5 block text-sm font-semibold text-gray-700">
+                  Additional details{' '}
+                  <span className="font-normal text-gray-400">
+                    (optional)
+                  </span>
+                </label>
+
+                <textarea
+                  value={reportDetails}
+                  onChange={(event) =>
+                    setReportDetails(
+                      event.target.value.slice(
+                        0,
+                        1000
+                      )
+                    )
+                  }
+                  disabled={reportLoading}
+                  rows={4}
+                  placeholder="Tell us what happened."
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-black disabled:opacity-50"
+                />
+
+                <p className="mt-1 text-right text-xs text-gray-400">
+                  {reportDetails.length}/1000
+                </p>
+
+                {reportError && (
+                  <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-600">
+                    {reportError}
+                  </div>
+                )}
+
+                <div className="mt-6 grid grid-cols-2 gap-3">
+
+                  <button
+                    type="button"
+                    onClick={closeReportModal}
+                    disabled={reportLoading}
+                    className="rounded-xl border border-gray-200 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleReportUser}
+                    disabled={
+                      reportLoading ||
+                      !reportReason
+                    }
+                    className="rounded-xl bg-amber-600 px-4 py-3 font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {reportLoading
+                      ? 'Submitting...'
+                      : 'Submit report'}
+                  </button>
+
+                </div>
+
+              </>
+
+            )}
 
           </div>
 

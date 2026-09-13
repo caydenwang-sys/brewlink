@@ -63,6 +63,24 @@ export default function ConversationPage() {
   const [error, setError] =
     useState('')
 
+  const [messageToReport, setMessageToReport] =
+    useState<Message | null>(null)
+
+  const [reportReason, setReportReason] =
+    useState('')
+
+  const [reportDetails, setReportDetails] =
+    useState('')
+
+  const [reportLoading, setReportLoading] =
+    useState(false)
+
+  const [reportError, setReportError] =
+    useState('')
+
+  const [reportSubmitted, setReportSubmitted] =
+    useState(false)
+
   // ============================================
   // AUTO-SCROLL REF
   // ============================================
@@ -792,6 +810,76 @@ export default function ConversationPage() {
     }, 50)
   }
 
+  // ============================================
+  // REPORT MESSAGE
+  // ============================================
+
+  function openReportMessage(
+    message: Message
+  ) {
+    setMessageToReport(message)
+    setReportReason('')
+    setReportDetails('')
+    setReportError('')
+    setReportSubmitted(false)
+  }
+
+  function closeReportMessage() {
+    if (reportLoading) {
+      return
+    }
+
+    setMessageToReport(null)
+    setReportReason('')
+    setReportDetails('')
+    setReportError('')
+    setReportSubmitted(false)
+  }
+
+  async function handleReportMessage() {
+    if (
+      !messageToReport ||
+      !otherUser ||
+      !currentUserId ||
+      !reportReason ||
+      reportLoading
+    ) {
+      return
+    }
+
+    setReportLoading(true)
+    setReportError('')
+
+    const supabase = createClient()
+
+    const { error: submitError } =
+      await supabase.from('reports').insert({
+        reporter_id: currentUserId,
+        reported_user_id: otherUser.id,
+        report_type: 'message',
+        reason: reportReason,
+        details:
+          reportDetails.trim() || null,
+        message_id: messageToReport.id,
+        reported_content:
+          messageToReport.message.slice(
+            0,
+            2000
+          ),
+      })
+
+    if (submitError) {
+      setReportError(
+        `Could not submit report: ${submitError.message}`
+      )
+      setReportLoading(false)
+      return
+    }
+
+    setReportLoading(false)
+    setReportSubmitted(true)
+  }
+
   function formatMessageTime(
     timestamp: string
   ) {
@@ -1047,6 +1135,27 @@ export default function ConversationPage() {
                         </span>
                       )}
 
+                      {!isMine && (
+                        <>
+                          <span aria-hidden="true">
+                            ·
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openReportMessage(
+                                message
+                              )
+                            }
+                            className="font-semibold text-gray-400 transition hover:text-red-600"
+                            aria-label="Report this message"
+                          >
+                            Report
+                          </button>
+                        </>
+                      )}
+
                     </div>
 
                   </div>
@@ -1066,6 +1175,172 @@ export default function ConversationPage() {
         )}
 
       </div>
+
+      {/* ======================================== */}
+      {/* REPORT MESSAGE MODAL */}
+      {/* ======================================== */}
+
+      {messageToReport && (
+
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5 backdrop-blur-sm">
+
+          <div className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl sm:p-7">
+
+            {reportSubmitted ? (
+
+              <>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-xl">
+                  ✓
+                </div>
+
+                <h2 className="mt-5 text-2xl font-bold">
+                  Report submitted
+                </h2>
+
+                <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                  Thank you. We&apos;ll review this message and take appropriate action.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={closeReportMessage}
+                  className="mt-7 w-full rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90"
+                >
+                  Done
+                </button>
+
+              </>
+
+            ) : (
+
+              <>
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-xl">
+                  ⚠️
+                </div>
+
+                <h2 className="mt-5 text-2xl font-bold">
+                  Report message?
+                </h2>
+
+                <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                  Reports are confidential. The message and your explanation will be sent for review.
+                </p>
+
+                <div className="mt-5 rounded-2xl bg-gray-50 p-4 text-sm leading-relaxed text-gray-600">
+                  &ldquo;{messageToReport.message}&rdquo;
+                </div>
+
+                <label className="mt-6 block text-sm font-semibold text-gray-700">
+                  Reason
+                </label>
+
+                <select
+                  value={reportReason}
+                  onChange={(event) =>
+                    setReportReason(
+                      event.target.value
+                    )
+                  }
+                  disabled={reportLoading}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-black disabled:opacity-50"
+                >
+                  <option value="">
+                    Select a reason
+                  </option>
+                  <option value="harassment">
+                    Harassment or bullying
+                  </option>
+                  <option value="hate_speech">
+                    Hate speech
+                  </option>
+                  <option value="spam">
+                    Spam or scam
+                  </option>
+                  <option value="inappropriate_content">
+                    Inappropriate content
+                  </option>
+                  <option value="impersonation">
+                    Impersonation
+                  </option>
+                  <option value="safety_concern">
+                    Safety concern
+                  </option>
+                  <option value="other">
+                    Other
+                  </option>
+                </select>
+
+                <label className="mt-5 block text-sm font-semibold text-gray-700">
+                  Additional details{' '}
+                  <span className="font-normal text-gray-400">
+                    (optional)
+                  </span>
+                </label>
+
+                <textarea
+                  value={reportDetails}
+                  onChange={(event) =>
+                    setReportDetails(
+                      event.target.value.slice(
+                        0,
+                        1000
+                      )
+                    )
+                  }
+                  disabled={reportLoading}
+                  rows={4}
+                  placeholder="Tell us what happened."
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-black disabled:opacity-50"
+                />
+
+                <p className="mt-1 text-right text-xs text-gray-400">
+                  {reportDetails.length}/1000
+                </p>
+
+                {reportError && (
+                  <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-600">
+                    {reportError}
+                  </div>
+                )}
+
+                <div className="mt-6 grid grid-cols-2 gap-3">
+
+                  <button
+                    type="button"
+                    onClick={closeReportMessage}
+                    disabled={reportLoading}
+                    className="rounded-xl border border-gray-200 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleReportMessage}
+                    disabled={
+                      reportLoading ||
+                      !reportReason
+                    }
+                    className="rounded-xl bg-amber-600 px-4 py-3 font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {reportLoading
+                      ? 'Submitting...'
+                      : 'Submit report'}
+                  </button>
+
+                </div>
+
+              </>
+
+            )}
+
+          </div>
+
+        </div>
+
+      )}
 
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/95 backdrop-blur">
 
