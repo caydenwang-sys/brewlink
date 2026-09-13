@@ -1450,7 +1450,7 @@ export default function ConnectionsPage() {
                           {openMenuId ===
                             connection.id && (
 
-                            <div className="absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-xl">
+                            <div className="fixed bottom-28 left-5 right-5 z-[60] w-auto sm:absolute sm:bottom-full sm:left-auto sm:right-0 sm:mb-2 sm:w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-xl">
 
                               <button
                                 type="button"
