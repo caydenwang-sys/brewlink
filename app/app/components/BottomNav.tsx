@@ -124,9 +124,7 @@ export default function BottomNav() {
           .select(`
             id,
             user_1_id,
-            user_2_id,
-            user_1_last_read_at,
-            user_2_last_read_at
+            user_2_id
           `)
           .or(
             `user_1_id.eq.${user.id},user_2_id.eq.${user.id}`
@@ -149,14 +147,11 @@ export default function BottomNav() {
         const match of
         matchRows
       ) {
-        const lastReadAt =
-          match.user_1_id ===
-          user.id
-            ? match.user_1_last_read_at
-            : match.user_2_last_read_at
-
-        let query =
-          supabase
+        const {
+          count: unreadCount,
+          error: unreadError,
+        } =
+          await supabase
             .from('messages')
             .select(
               '*',
@@ -173,20 +168,10 @@ export default function BottomNav() {
               'sender_id',
               user.id
             )
-
-        if (lastReadAt) {
-          query =
-            query.gt(
-              'created_at',
-              lastReadAt
+            .is(
+              'read_at',
+              null
             )
-        }
-
-        const {
-          count: unreadCount,
-          error: unreadError,
-        } =
-          await query
 
         if (!unreadError) {
           totalUnread +=

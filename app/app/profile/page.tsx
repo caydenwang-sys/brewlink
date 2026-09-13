@@ -2,8 +2,10 @@
 
 import {
   ChangeEvent,
+  PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -130,6 +132,42 @@ export default function ProfilePage() {
     useState<File | null>(
       null
     )
+
+  const [
+    cropSource,
+    setCropSource,
+  ] = useState<string | null>(null)
+
+  const [
+    cropOriginalFile,
+    setCropOriginalFile,
+  ] = useState<File | null>(null)
+
+  const [cropImageSize, setCropImageSize] =
+    useState({
+      width: 0,
+      height: 0,
+    })
+
+  const [cropZoom, setCropZoom] =
+    useState(1)
+
+  const [cropOffset, setCropOffset] =
+    useState({
+      x: 0,
+      y: 0,
+    })
+
+  const cropAreaRef =
+    useRef<HTMLDivElement | null>(null)
+
+  const cropDragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    offsetX: number
+    offsetY: number
+  } | null>(null)
 
   const [loading, setLoading] =
     useState(true)
@@ -1189,6 +1227,8 @@ export default function ProfilePage() {
       return
     }
 
+    event.target.value = ''
+
     setError('')
     setSuccess('')
 
@@ -1215,16 +1255,306 @@ export default function ProfilePage() {
       return
     }
 
-    setPhotoFile(file)
-
     const previewUrl =
       URL.createObjectURL(
         file
       )
 
-    setPhotoPreview(
-      previewUrl
+    const image = new Image()
+
+    image.onload = () => {
+      setCropOriginalFile(file)
+      setCropSource(previewUrl)
+      setCropImageSize({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })
+      setCropZoom(1)
+      setCropOffset({
+        x: 0,
+        y: 0,
+      })
+    }
+
+    image.onerror = () => {
+      URL.revokeObjectURL(previewUrl)
+      setError(
+        'This image could not be opened. Please choose another image.'
+      )
+    }
+
+    image.src = previewUrl
+  }
+
+  function getCropLimits(
+    zoom: number
+  ) {
+    const editorSize =
+      cropAreaRef.current?.clientWidth ||
+      300
+
+    if (
+      !cropImageSize.width ||
+      !cropImageSize.height
+    ) {
+      return {
+        maxX: 0,
+        maxY: 0,
+      }
+    }
+
+    const baseScale = Math.max(
+      editorSize / cropImageSize.width,
+      editorSize / cropImageSize.height
     )
+
+    const displayedWidth =
+      cropImageSize.width *
+      baseScale *
+      zoom
+
+    const displayedHeight =
+      cropImageSize.height *
+      baseScale *
+      zoom
+
+    return {
+      maxX: Math.max(
+        0,
+        (displayedWidth - editorSize) /
+          2
+      ),
+      maxY: Math.max(
+        0,
+        (displayedHeight - editorSize) /
+          2
+      ),
+    }
+  }
+
+  function clampCropOffset(
+    x: number,
+    y: number,
+    zoom: number = cropZoom
+  ) {
+    const {
+      maxX,
+      maxY,
+    } = getCropLimits(zoom)
+
+    return {
+      x: Math.max(
+        -maxX,
+        Math.min(maxX, x)
+      ),
+      y: Math.max(
+        -maxY,
+        Math.min(maxY, y)
+      ),
+    }
+  }
+
+  function handleCropPointerDown(
+    event: ReactPointerEvent<HTMLDivElement>
+  ) {
+    event.currentTarget.setPointerCapture(
+      event.pointerId
+    )
+
+    cropDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: cropOffset.x,
+      offsetY: cropOffset.y,
+    }
+  }
+
+  function handleCropPointerMove(
+    event: ReactPointerEvent<HTMLDivElement>
+  ) {
+    const drag = cropDragRef.current
+
+    if (
+      !drag ||
+      drag.pointerId !== event.pointerId
+    ) {
+      return
+    }
+
+    setCropOffset(
+      clampCropOffset(
+        drag.offsetX +
+          event.clientX -
+          drag.startX,
+        drag.offsetY +
+          event.clientY -
+          drag.startY
+      )
+    )
+  }
+
+  function handleCropPointerEnd(
+    event: ReactPointerEvent<HTMLDivElement>
+  ) {
+    if (
+      cropDragRef.current?.pointerId ===
+      event.pointerId
+    ) {
+      cropDragRef.current = null
+    }
+  }
+
+  function handleCropZoomChange(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const nextZoom = Number(
+      event.target.value
+    )
+
+    setCropZoom(nextZoom)
+    setCropOffset((current) =>
+      clampCropOffset(
+        current.x,
+        current.y,
+        nextZoom
+      )
+    )
+  }
+
+  function closeCropEditor() {
+    if (cropSource) {
+      URL.revokeObjectURL(cropSource)
+    }
+
+    setCropSource(null)
+    setCropOriginalFile(null)
+    setCropImageSize({
+      width: 0,
+      height: 0,
+    })
+    setCropZoom(1)
+    setCropOffset({
+      x: 0,
+      y: 0,
+    })
+    cropDragRef.current = null
+  }
+
+  async function applyPhotoCrop() {
+    if (
+      !cropSource ||
+      !cropOriginalFile ||
+      !cropAreaRef.current ||
+      !cropImageSize.width ||
+      !cropImageSize.height
+    ) {
+      return
+    }
+
+    const editorSize =
+      cropAreaRef.current.clientWidth
+
+    const baseScale = Math.max(
+      editorSize / cropImageSize.width,
+      editorSize / cropImageSize.height
+    )
+
+    const displayedScale =
+      baseScale * cropZoom
+
+    const sourceSize =
+      editorSize / displayedScale
+
+    const sourceX = Math.max(
+      0,
+      Math.min(
+        cropImageSize.width - sourceSize,
+        (cropImageSize.width - sourceSize) /
+          2 -
+          cropOffset.x / displayedScale
+      )
+    )
+
+    const sourceY = Math.max(
+      0,
+      Math.min(
+        cropImageSize.height - sourceSize,
+        (cropImageSize.height - sourceSize) /
+          2 -
+          cropOffset.y / displayedScale
+      )
+    )
+
+    const image = new Image()
+
+    image.onload = () => {
+      const canvas =
+        document.createElement('canvas')
+
+      canvas.width = 800
+      canvas.height = 800
+
+      const context =
+        canvas.getContext('2d')
+
+      if (!context) {
+        setError(
+          'Could not prepare this photo. Please try again.'
+        )
+        return
+      }
+
+      context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceSize,
+        sourceSize,
+        0,
+        0,
+        800,
+        800
+      )
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            setError(
+              'Could not prepare this photo. Please try again.'
+            )
+            return
+          }
+
+          const croppedFile = new File(
+            [blob],
+            'profile.jpg',
+            {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            }
+          )
+
+          const croppedPreview =
+            URL.createObjectURL(blob)
+
+          setPhotoFile(croppedFile)
+          setPhotoPreview(croppedPreview)
+          setSuccess('')
+          closeCropEditor()
+        },
+        'image/jpeg',
+        0.9
+      )
+    }
+
+    image.onerror = () => {
+      setError(
+        'Could not prepare this photo. Please try again.'
+      )
+    }
+
+    image.src = cropSource
   }
 
   // ============================================
@@ -8195,6 +8525,122 @@ export default function ProfilePage() {
                 </div>
 
               )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ======================================== */}
+      {/* PROFILE PHOTO CROP EDITOR */}
+      {/* ======================================== */}
+
+      {cropSource && (
+
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-5 py-8 backdrop-blur-sm">
+
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div>
+
+                <h2 className="text-2xl font-bold">
+                  Adjust photo
+                </h2>
+
+                <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                  Drag and zoom until the photo looks right inside the circle. This is how it will appear on your profile.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCropEditor}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-lg font-semibold text-gray-600 transition hover:bg-gray-200"
+                aria-label="Cancel photo adjustment"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div
+              ref={cropAreaRef}
+              onPointerDown={handleCropPointerDown}
+              onPointerMove={handleCropPointerMove}
+              onPointerUp={handleCropPointerEnd}
+              onPointerCancel={handleCropPointerEnd}
+              className="relative mx-auto mt-6 aspect-square w-full max-w-[320px] cursor-move touch-none overflow-hidden rounded-full bg-black ring-4 ring-white shadow-xl"
+            >
+
+              <img
+                src={cropSource}
+                alt="Photo crop preview"
+                draggable={false}
+                className="pointer-events-none absolute max-w-none select-none"
+                style={{
+                  left: `calc(50% + ${cropOffset.x}px)`,
+                  top: `calc(50% + ${cropOffset.y}px)`,
+                  width:
+                    cropImageSize.width <
+                    cropImageSize.height
+                      ? '100%'
+                      : 'auto',
+                  height:
+                    cropImageSize.width >=
+                    cropImageSize.height
+                      ? '100%'
+                      : 'auto',
+                  transform: `translate(-50%, -50%) scale(${cropZoom})`,
+                  transformOrigin: 'center',
+                }}
+              />
+
+            </div>
+
+            <div className="mx-auto mt-6 max-w-[320px]">
+
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+                <span>Zoom out</span>
+                <span>{cropZoom.toFixed(1)}×</span>
+                <span>Zoom in</span>
+              </div>
+
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.05"
+                value={cropZoom}
+                onChange={handleCropZoomChange}
+                className="mt-3 w-full accent-black"
+                aria-label="Photo zoom"
+              />
+
+            </div>
+
+            <div className="mt-7 grid grid-cols-2 gap-3">
+
+              <button
+                type="button"
+                onClick={closeCropEditor}
+                className="rounded-xl border border-gray-200 px-4 py-3 font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={applyPhotoCrop}
+                className="rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90"
+              >
+                Use photo
+              </button>
 
             </div>
 
